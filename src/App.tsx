@@ -1,13 +1,18 @@
-export default function App() {
+import React from "react";
+import { RouterProvider } from "react-router-dom";
+import { ThemeProvider } from "@/theme/ThemeProvider";
+import "@/theme/theme.css";
+import { router } from "@/lib/router";
+import { AuthProvider } from "@/types/auth";
+
+const App: React.FC = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-900">
-      <div className="text-center space-y-4">
-        <h1 className="text-5xl font-extrabold text-pink-500">Tailwind v4 OK 🎉</h1>
-        <p className="text-zinc-300">Фон має бути темний, заголовок — рожевий.</p>
-        <button className="px-6 py-2 rounded-full bg-emerald-500 text-white hover:bg-emerald-600 transition">
-          Test Button
-        </button>
-      </div>
-    </div>
+    <ThemeProvider>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </ThemeProvider>
   );
-}
+};
+
+export default App;
