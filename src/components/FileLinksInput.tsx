@@ -1,3 +1,4 @@
+//src/components/FileLinksInput.tsx
 import React, { useState } from "react";
 import type { TaskFileLink } from "@/types/homework";
 import { uid } from "@/lib/fakeApi";

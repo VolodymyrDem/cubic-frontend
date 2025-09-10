@@ -1,3 +1,4 @@
+//src/components/ScheduleWeek.tsx
 import React, { useMemo } from "react";
 import type { Lesson } from "@/types/schedule";
 import { isEvenWeek } from "@/lib/utils/date";

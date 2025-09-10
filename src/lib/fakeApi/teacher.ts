@@ -1,3 +1,4 @@
+//src/lib/fakeApi/teacher.ts
 import { ok, uid } from "./index";
 import type { TeacherSchedule } from "@/types/schedule";
 import type { Student } from "@/types/students";

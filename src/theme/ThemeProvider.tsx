@@ -1,3 +1,4 @@
+//src/theme/ThemeProvider.tsx
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 type Theme = "light" | "dark";
@@ -7,12 +8,19 @@ const Ctx = createContext<ThemeCtx | null>(null);
 const KEY = "fh.theme";
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // const getInitial = (): Theme => {
+  //   const saved = localStorage.getItem(KEY) as Theme | null;
+  //   if (saved) return saved;
+  //   const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+  //   return prefersDark ? "dark" : "light";
+  // };
+
   const getInitial = (): Theme => {
-    const saved = localStorage.getItem(KEY) as Theme | null;
-    if (saved) return saved;
-    const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-    return prefersDark ? "dark" : "light";
-  };
+  const saved = localStorage.getItem(KEY) as Theme | null;
+  if (saved) return saved;
+  return "dark"; // 👈 дефолтна тема
+};
+
 
   const [theme, setTheme] = useState<Theme>(getInitial);
 

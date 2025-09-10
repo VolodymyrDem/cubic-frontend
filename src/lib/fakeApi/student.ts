@@ -1,3 +1,4 @@
+//src/lib/fakeApi/student.ts
 import { ok, uid } from "./index";
 import type { StudentSchedule } from "@/types/schedule";
 import type { HomeworkTask } from "@/types/homework";

@@ -1,3 +1,4 @@
+//src/pages/teacher/TeacherStudents.tsx
 import React, { useEffect, useState } from "react";
 import { fetchMyStudents } from "@/lib/fakeApi/teacher";
 import type { Student } from "@/types/students";

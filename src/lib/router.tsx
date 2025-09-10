@@ -1,25 +1,31 @@
-import { createBrowserRouter, Navigate } from "react-router-dom";
-import Layout from "@/components/Layout";
+// src/lib/router.tsx
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
+import AuthProcessing from "@/pages/AuthProcessing";
+import CompleteProfile from "@/pages/CompleteProfile";
+
 
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentSchedule from "@/pages/student/StudentSchedule";
 import StudentHomework from "@/pages/student/StudentHomework";
+
 
 import TeacherDashboard from "@/pages/teacher/TeacherDashboard";
 import TeacherSchedule from "@/pages/teacher/TeacherSchedule";
 import TeacherStudents from "@/pages/teacher/TeacherStudents";
 import TeacherAddAssignment from "@/pages/teacher/TeacherAddAssignment";
 
+
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminTeachers from "@/pages/admin/AdminTeachers";
 import AdminSchedule from "@/pages/admin/AdminSchedule";
+import { createBrowserRouter, Navigate } from "react-router-dom";
+import Layout from "@/components/Layout";
 
-// тут головне
+
 export const router = createBrowserRouter(
   [
     {
@@ -29,6 +35,9 @@ export const router = createBrowserRouter(
         { index: true, element: <Home /> },
         { path: "login", element: <Login /> },
         { path: "register", element: <Register /> },
+        { path: "auth/processing", element: <AuthProcessing /> },
+        { path: "complete-profile", element: <CompleteProfile /> },
+
 
         {
           path: "student",
@@ -44,6 +53,7 @@ export const router = createBrowserRouter(
             { path: "homework", element: <StudentHomework /> },
           ],
         },
+
 
         {
           path: "teacher",
@@ -61,6 +71,7 @@ export const router = createBrowserRouter(
           ],
         },
 
+
         {
           path: "admin",
           element: (
@@ -76,11 +87,10 @@ export const router = createBrowserRouter(
           ],
         },
 
+
         { path: "*", element: <Navigate to="/" replace /> },
       ],
     },
   ],
-  {
-    basename: import.meta.env.BASE_URL, // <-- автоматично підхоплює /cubic-frontend/
-  }
+  { basename: import.meta.env.BASE_URL }
 );

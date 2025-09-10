@@ -1,3 +1,4 @@
+//src/pages/student/StudentDashboard.tsx
 import React from "react";
 import { StudentTiles } from "@/components/DashboardTiles";
 

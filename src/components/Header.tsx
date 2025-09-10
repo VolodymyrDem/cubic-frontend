@@ -1,25 +1,42 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useHideOnScroll } from "@/lib/hooks/useHideOnScroll";
-import { useTheme } from "@/theme/ThemeProvider";
 import { useAuth } from "@/types/auth";
 import { cls } from "@/lib/utils/cls";
+import favicon from "@/assets/favicon.ico";
 
 const Header: React.FC = () => {
   const hidden = useHideOnScroll();
-  const { theme, toggle } = useTheme();
   const { user, logout } = useAuth();
   const nav = useNavigate();
 
+  // Плавна поява після монтування
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
-    <header className={cls(
-      "fixed inset-x-0 top-0 z-50 transition-transform duration-300",
-      hidden ? "-translate-y-full" : "translate-y-0"
-    )}>
+    <header
+      className={cls(
+        "fixed inset-x-0 top-0 z-50 transition-transform duration-300",
+        hidden ? "-translate-y-full" : "translate-y-0"
+      )}
+    >
       <div className="mx-auto max-w-6xl px-4">
-        <div className="mt-3 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 backdrop-blur card px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="font-semibold">🎓 Faculty Helper</Link>
-          <nav className="hidden md:flex gap-4 text-sm">
+        <div
+          className={cls(
+            "mt-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]/30 backdrop-blur-sm px-6 py-5 flex items-center justify-between",
+            "header-mount",
+            mounted && "header-mount--in"
+          )}
+        >
+          {/* Logo */}
+          <Link to="/" className="flex items-center gap-3 font-semibold text-xl">
+            <img src={favicon} alt="Logo" className="h-8 w-8" />
+            <span>Cubic Helper</span>
+          </Link>
+
+          {/* Nav */}
+          <nav className="hidden md:flex gap-6 text-lg">
             <NavLink to="/" className="hover:opacity-80">Головна</NavLink>
             {user?.role === "student" && (
               <>
@@ -41,16 +58,23 @@ const Header: React.FC = () => {
               </>
             )}
           </nav>
-          <div className="flex items-center gap-2">
-            <button className="btn" onClick={toggle} title="Перемкнути тему">
-              {theme === "light" ? "🌙" : "☀️"}
-            </button>
+
+          {/* Right side */}
+          <div className="flex items-center gap-3 text-lg">
             {user ? (
-              <button className="btn" onClick={() => { logout(); nav("/"); }}>
+              <button
+                className="btn text-lg px-4 py-2"
+                onClick={() => {
+                  logout();
+                  nav("/");
+                }}
+              >
                 Вийти
               </button>
             ) : (
-              <Link to="/login" className="btn">Увійти</Link>
+              <Link to="/login" className="btn text-lg px-4 py-2">
+                Увійти
+              </Link>
             )}
           </div>
         </div>

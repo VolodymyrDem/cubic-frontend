@@ -1,71 +1,120 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+// src/types/auth.tsx
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { api, API_BASE } from "@/lib/api";
 
 export type Role = "student" | "teacher" | "admin";
+export type UserStatus = "active" | "pending_profile" | "pending_approval" | "disabled";
 
 export type User = {
   id: string;
   name: string;
-  role: Role;
   email: string;
+  role?: Role | null;
+  status: UserStatus;
 };
 
 type AuthCtx = {
   user: User | null;
-  login: (email: string, password: string, role: Role) => Promise<void>;
-  register: (name: string, email: string, password: string, role: Role) => Promise<void>;
-  logout: () => void;
-  loading: boolean;
+  initializing: boolean; // перший автологін / перевірка сесії
+  loading: boolean; // запити типу logout тощо
+  loginWithGoogle: () => void; // PROD: редірект на бекенд
+  refreshMe: () => Promise<void>; // підтягнути сесію з cookie
+  logout: () => Promise<void>;
+  /** DEV-тільки: миттєво підставити роль без Google */
+  loginAs?: (role: Role) => void;
 };
 
-const Ctx = createContext<AuthCtx | null>(null);
-const KEY = "fh.auth";
+// ---- DEV SWITCH ----
+// .env: VITE_DEV_AUTH=1 для заглушок; VITE_DEV_AUTH=0 для прод
+const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "1") === "1";
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
-}
+const Ctx = createContext<AuthCtx | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-
-  const [user, setUser] = useState<User | null>(() => {
-  // 🔧 для тесту — завжди студент
-  return {
-    id: "1",
-    name: "Test Student",
-    role: "admin",
-    email: "student@example.com",
-  };
-});
-
-  // const [user, setUser] = useState<User | null>(() => {
-  //   const raw = localStorage.getItem(KEY);
-  //   return raw ? (JSON.parse(raw) as User) : null;
-  // });
+  const [user, setUser] = useState<User | null>(null);
+  const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const login = async (email: string, _password: string, role: Role) => {
+  // ----------- PROD: /auth/me -----------
+  const refreshMe = useCallback(async () => {
+    try {
+      const data = await api.get<{ user: User }>("/auth/me");
+      setUser(data?.user ?? null);
+    } catch {
+      setUser(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    // DEV: не робимо мережевий виклик, залишаємо користувача як є
+    if (DEV_AUTH) {
+      setInitializing(false);
+      return;
+    }
+    // PROD: одна перевірка сесії при монтуванні
+    void (async () => {
+      await refreshMe();
+      setInitializing(false);
+    })();
+  }, [refreshMe]);
+
+  // ----------- PROD: Google redirect -----------
+  const loginWithGoogle = () => {
+    if (DEV_AUTH) {
+      // У дев-режимі реальний редірект не потрібен
+      console.warn("[DEV_AUTH] loginWithGoogle() викликано — ігноруємо редірект.");
+      return;
+    }
+    // Full redirect to backend start endpoint
+    window.location.href = API_BASE + "/auth/google/start";
+  };
+
+  // ----------- PROD: Logout -----------
+  const logout = useCallback(async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 400));
-    const u: User = { id: uid(), name: email.split("@")[0], role, email };
-    setUser(u);
-    localStorage.setItem(KEY, JSON.stringify(u));
-    setLoading(false);
-  };
+    try {
+      if (!DEV_AUTH) {
+        await api.post("/auth/logout");
+      }
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const register = async (name: string, email: string, _password: string, role: Role) => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const u: User = { id: uid(), name, role, email };
-    setUser(u);
-    localStorage.setItem(KEY, JSON.stringify(u));
-    setLoading(false);
-  };
+  // ----------- DEV-ONLY: миттєвий логін за роллю -----------
+  // Видали цей блок у проді або вимкни через VITE_DEV_AUTH=0
+  const loginAs = useCallback((role: Role) => {
+    if (!DEV_AUTH) return;
+    const fake: User = {
+      id: `dev-${role}`,
+      name: role.toUpperCase(),
+      email: `${role}@dev.local`,
+      role,
+      status: "active",
+    };
+    setUser(fake);
+  }, []);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem(KEY);
-  };
-
-  const value = useMemo(() => ({ user, login, register, logout, loading }), [user, loading]);
+  const value: AuthCtx = useMemo(
+    () => ({
+      user,
+      initializing,
+      loading,
+      loginWithGoogle,
+      refreshMe,
+      logout,
+      ...(DEV_AUTH ? { loginAs } : {}), // у проді поля loginAs не буде
+    }),
+    [user, initializing, loading, loginWithGoogle, refreshMe, logout, loginAs]
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 };

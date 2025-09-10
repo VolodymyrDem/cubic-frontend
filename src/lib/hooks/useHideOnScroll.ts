@@ -1,3 +1,4 @@
+//src/lib/hooks/useHideOnScroll.ts
 import { useEffect, useRef, useState } from "react";
 
 export const useHideOnScroll = () => {

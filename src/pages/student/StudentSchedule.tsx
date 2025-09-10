@@ -1,3 +1,4 @@
+//src/pages/student/StudentSchedule.tsx
 import React, { useEffect, useState } from "react";
 import { fetchStudentSchedule } from "@/lib/fakeApi/student";
 import type { StudentSchedule as T } from "@/types/schedule";

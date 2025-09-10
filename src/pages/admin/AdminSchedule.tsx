@@ -1,3 +1,4 @@
+//src/pages/admin/AdminSchedule.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { fetchTeacherDetailedSchedule, updateGlobalSchedule } from "@/lib/fakeApi/admin";
 import type { TeacherSchedule } from "@/types/schedule";

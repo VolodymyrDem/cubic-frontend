@@ -1,3 +1,4 @@
+//src/pages/admin/AdminDashboard.tsx
 import React from "react";
 import { AdminTiles } from "@/components/DashboardTiles";
 

@@ -1,3 +1,4 @@
+//src/types/schedule.ts
 import type { Id, ISODate } from "./common";
 
 export type WeekParity = "even" | "odd" | "any";

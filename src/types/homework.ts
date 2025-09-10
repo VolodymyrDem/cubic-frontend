@@ -1,3 +1,4 @@
+//src/types/homework.ts
 import type { Id, ISODate, ISODateTime } from "./common";
 
 export type TaskFileLink = { id: Id; url: string; title?: string };

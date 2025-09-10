@@ -1,3 +1,4 @@
+//src/lib/utils/date.ts
 export function academicYearStart(d: Date = new Date()): Date {
   const year = d.getMonth() >= 8 ? d.getFullYear() : d.getFullYear() - 1; // вересень = 8
   return new Date(year, 8, 1); // 1 вересня

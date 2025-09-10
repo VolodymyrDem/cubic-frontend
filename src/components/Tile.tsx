@@ -1,11 +1,36 @@
+// src/components/Tile.tsx
 import React from "react";
 import { Link } from "react-router-dom";
 
-const Tile: React.FC<{ to: string; title: string; subtitle?: string; icon?: React.ReactNode }> = ({ to, title, subtitle, icon }) => (
-  <Link to={to} className="card p-5 hover:brightness-110 transition">
-    <div className="text-3xl mb-3">{icon ?? "🧩"}</div>
-    <div className="font-semibold">{title}</div>
-    {subtitle && <div className="text-sm text-[var(--muted)] mt-1">{subtitle}</div>}
+type Props = {
+  to: string;
+  title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  bg?: string; // шлях до фонового зображення
+};
+
+const Tile: React.FC<Props> = ({ to, title, subtitle, icon, bg }) => (
+  <Link
+    to={to}
+    className="card p-5 hover:brightness-110 transition relative overflow-hidden border border-[var(--border)] rounded-2xl"
+    style={
+      bg
+        ? {
+            backgroundImage: `url(${bg})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            color: "white",
+          }
+        : {}
+    }
+  >
+    {bg && <div className="absolute inset-0 bg-black/40" />} {/* затемнення */}
+    <div className="relative z-10">
+      <div className="text-3xl mb-3">{icon ?? "🧩"}</div>
+      <div className="font-semibold text-lg">{title}</div>
+      {subtitle && <div className="text-sm opacity-90 mt-1">{subtitle}</div>}
+    </div>
   </Link>
 );
 
