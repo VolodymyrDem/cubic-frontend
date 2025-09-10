@@ -48,7 +48,6 @@ const Header: React.FC = () => {
               <>
                 <NavLink to="/teacher/schedule">Мій розклад</NavLink>
                 <NavLink to="/teacher/students">Студенти</NavLink>
-                <NavLink to="/teacher/add-assignment">Додати завдання</NavLink>
               </>
             )}
             {user?.role === "admin" && (
