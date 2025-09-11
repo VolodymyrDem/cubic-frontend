@@ -1,7 +1,6 @@
 // src/lib/api.ts
 export const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
 
-// src/lib/api.ts
 import { config } from "@/config/runtime";
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -12,6 +11,7 @@ async function request<T>(
   opts: { method?: HttpMethod; body?: Json; headers?: Record<string, string> } = {}
 ): Promise<T> {
   const { method = "GET", body, headers } = opts;
+
   const res = await fetch(config.API_BASE_URL + path, {
     method,
     credentials: "include",
@@ -24,21 +24,18 @@ async function request<T>(
 
   if (!res.ok) {
     let err: any = { status: res.status, statusText: res.statusText };
-    try { err = { ...err, ...(await res.json()) }; } catch { /* ignore */ }
+    try { err = { ...err, ...(await res.json()) }; } catch {}
     throw err;
   }
 
   if (res.status === 204) return undefined as unknown as T;
-
-  try { return (await res.json()) as T; } catch {
-    return undefined as unknown as T;
-  }
+  try { return (await res.json()) as T; } catch { return undefined as unknown as T; }
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
+  get:  <T>(path: string) => request<T>(path),
   post: <T>(path: string, body?: Json) => request<T>(path, { method: "POST", body }),
-  put: <T>(path: string, body?: Json) => request<T>(path, { method: "PUT", body }),
-  patch: <T>(path: string, body?: Json) => request<T>(path, { method: "PATCH", body }),
-  delete: <T>(path: string) => request<T>(path, { method: "DELETE" }),
+  put:  <T>(path: string, body?: Json) => request<T>(path, { method: "PUT", body }),
+  patch:<T>(path: string, body?: Json) => request<T>(path, { method: "PATCH", body }),
+  delete:<T>(path: string) => request<T>(path, { method: "DELETE" }),
 };

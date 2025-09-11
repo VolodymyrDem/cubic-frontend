@@ -2,29 +2,29 @@
 FROM node:20-alpine AS build
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --no-audit --no-fund
+# Опційно: якщо використовуєш pnpm — заміни на pnpm
+COPY package.json package-lock.json* ./
+RUN npm ci
+
 COPY . .
+# Vite base вже заданий у vite.config.ts
 RUN npm run build
 
-# ---------- runtime stage ----------
 FROM nginx:1.27-alpine
+ENV APP_BASE_PATH=/cubic-frontend
+ENV API_BASE_URL=
+ENV WEB_ROOT=/usr/share/nginx/html
 
-# Зібраний фронт
-COPY --from=build /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist ${WEB_ROOT}${APP_BASE_PATH}
 
-# Шаблон конфіга (перегенеруємо на старті)
-COPY public/config.js.template /usr/share/nginx/html/config.js.template
+# ✅ підкладаємо свій nginx.conf і серверний default.conf
+COPY ./docker/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY ./docker/nginx/default.conf /etc/nginx/conf.d/default.conf
 
-# Скрипт генерації конфіга
-COPY docker/entrypoint.sh /docker-entrypoint.d/40-gen-config.sh
-RUN chmod +x /docker-entrypoint.d/40-gen-config.sh
-
-# Nginx SPA конфіг
-COPY docker/nginx.conf /etc/nginx/nginx.conf
+# runtime config (якщо використовуєш)
+COPY ./docker/config/config.template.js /config.template.js
+COPY ./docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 EXPOSE 80
-
-# Значення за замовчуванням (можна перевизначити при запуску)
-ENV API_BASE_URL="http://localhost:8080" \
-    APP_NAME="Cubic helper"
+ENTRYPOINT ["/entrypoint.sh"]
