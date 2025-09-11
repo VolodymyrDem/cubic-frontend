@@ -69,6 +69,7 @@ export async function fetchStudentSchedule(studentId: string): Promise<StudentSc
 
 // 🔹 тепер повертаємо { tasks, totalWeeks } і додано більше завдань
 export async function fetchStudentHomework(studentId: string): Promise<StudentHomeworkResponse> {
+  console.log("fetchStudentHomework", { studentId });
   const today = new Date();
   const mkDate = (offsetDays: number) => {
     const d = new Date(today);

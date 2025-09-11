@@ -5,7 +5,6 @@ import type { StudentSchedule as T } from "@/types/schedule";
 import { useAuth } from "@/types/auth";
 import ScheduleWeek from "@/components/ScheduleWeek";
 import { formatWeekRange, getFirstTeachingMonday, getParity, getWeekIndex, getWeekStartFromIndex } from "@/lib/time/academicWeek";
-import WeekDots from "@/components/WeekDots";
 import Reveal from "@/components/Reveal";
 import Crossfade from "@/components/Crossfade";
 import WeekPickerCard from "@/components/WeekPickerCard";
