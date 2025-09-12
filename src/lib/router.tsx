@@ -22,6 +22,10 @@ import TeacherStudents from "@/pages/teacher/TeacherStudents";
 import AdminDashboard from "@/pages/admin/AdminDashboard";
 import AdminTeachers from "@/pages/admin/AdminTeachers";
 import AdminSchedule from "@/pages/admin/AdminSchedule";
+import AdminLogs from "@/pages/admin/AdminLogs";
+import AdminArchive from "@/pages/admin/AdminArchive";
+import AdminStudents from "@/pages/admin/AdmineStudents"; 
+import AdminCourses from "@/pages/admin/AdminCourses"; 
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 
@@ -83,6 +87,10 @@ export const router = createBrowserRouter(
             { path: "dashboard", element: <AdminDashboard /> },
             { path: "teachers", element: <AdminTeachers /> },
             { path: "schedule", element: <AdminSchedule /> },
+            { path: "logs", element: <AdminLogs /> },
+            { path: "archive", element: <AdminArchive /> },
+            { path: "courses", element: <AdminCourses /> },
+            { path: "students", element: <AdminStudents /> }
           ],
         },
 

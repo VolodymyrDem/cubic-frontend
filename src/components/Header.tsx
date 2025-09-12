@@ -44,12 +44,12 @@ const Header: React.FC = () => {
               <NavLink to="/teacher/students">Студенти</NavLink>
             </>
           )}
-          {user?.role === "admin" && (
+          {/* {user?.role === "admin" && (
             <>
               <NavLink to="/admin/teachers">Викладачі</NavLink>
               <NavLink to="/admin/schedule">Розклад</NavLink>
             </>
-          )}
+          )} */}
         </nav>
 
         {/* Right side */}
