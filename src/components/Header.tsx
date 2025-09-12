@@ -1,32 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useHideOnScroll } from "@/lib/hooks/useHideOnScroll";
 import { useAuth } from "@/types/auth";
 import { cls } from "@/lib/utils/cls";
 import favicon from "@/assets/favicon.ico";
 import { Sun, Moon } from "lucide-react";
+import { useTheme } from "@/theme/ThemeProvider";
 
 const Header: React.FC = () => {
   const hidden = useHideOnScroll();
   const { user, logout } = useAuth();
   const nav = useNavigate();
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  // Тема
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    document.documentElement.getAttribute("data-theme") === "light"
-      ? "light"
-      : "dark"
-  );
-
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-  }, [theme]);
-
-  const toggleTheme = () =>
-    setTheme((t) => (t === "light" ? "dark" : "light"));
+  // Тема з контексту (зберігається в localStorage у ThemeProvider)
+  const { theme, toggle } = useTheme();
 
   return (
     <header
@@ -35,13 +22,7 @@ const Header: React.FC = () => {
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
-      <div
-        className={cls(
-          "mt-4 glasscard px-6 py-5 flex items-center justify-between relative",
-          "header-mount",
-          mounted && "header-mount--in"
-        )}
-      >
+      <div className={cls("mt-4 glasscard px-6 py-5 flex items-center justify-between relative")}>
         {/* Logo (left) */}
         <Link to="/" className="flex items-center gap-3 font-semibold text-xl">
           <img src={favicon} alt="Logo" className="h-8 w-8" />
@@ -89,17 +70,9 @@ const Header: React.FC = () => {
             </Link>
           )}
 
-          {/* Кнопка перемикання теми */}
-          <button
-            onClick={toggleTheme}
-            className="btn p-10"
-            aria-label="Перемкнути тему"
-          >
-            {theme === "light" ? (
-              <Moon className="h-7 w-7" />
-            ) : (
-              <Sun className="h-7 w-7" />
-            )}
+          {/* Кнопка перемикання теми (збереження виконує ThemeProvider) */}
+          <button onClick={toggle} className="btn p-2" aria-label="Перемкнути тему">
+            {theme === "light" ? <Moon className="h-7 w-7" /> : <Sun className="h-7 w-7" />}
           </button>
         </div>
       </div>

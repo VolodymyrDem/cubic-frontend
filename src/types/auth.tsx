@@ -35,6 +35,29 @@ type AuthCtx = {
 // .env: VITE_DEV_AUTH=1 для заглушок; VITE_DEV_AUTH=0 для прод
 const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "1") === "1";
 
+// ключ для localStorage
+const STORAGE_KEY = "cubic.auth.user";
+
+// безпечні хелпери для збереження/читання з localStorage
+function loadStoredUser(): User | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw) as User;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredUser(user: User | null) {
+  try {
+    if (user) localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
 const Ctx = createContext<AuthCtx | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -46,24 +69,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const refreshMe = useCallback(async () => {
     try {
       const data = await api.get<{ user: User }>("/auth/me");
-      setUser(data?.user ?? null);
+      const nextUser = data?.user ?? null;
+      setUser(nextUser);
+      saveStoredUser(nextUser); // синхронізуємо й локально
     } catch {
       setUser(null);
+      saveStoredUser(null);
     }
   }, []);
 
   useEffect(() => {
-    // DEV: не робимо мережевий виклик, залишаємо користувача як є
+    // DEV: відновлюємо користувача з localStorage і завершуємо ініціалізацію
     if (DEV_AUTH) {
+      const stored = loadStoredUser();
+      if (stored) setUser(stored);
       setInitializing(false);
       return;
     }
+
     // PROD: одна перевірка сесії при монтуванні
     void (async () => {
       await refreshMe();
       setInitializing(false);
     })();
   }, [refreshMe]);
+
+  // будь-яка зміна user — зберігаємо локально (дублюємо на випадок ручних змін)
+  useEffect(() => {
+    saveStoredUser(user);
+  }, [user]);
 
   // ----------- PROD: Google redirect -----------
   const loginWithGoogle = () => {
@@ -84,6 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await api.post("/auth/logout");
       }
       setUser(null);
+      saveStoredUser(null);
     } finally {
       setLoading(false);
     }
@@ -101,6 +136,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       status: "active",
     };
     setUser(fake);
+    saveStoredUser(fake);
   }, []);
 
   const value: AuthCtx = useMemo(

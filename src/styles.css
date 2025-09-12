@@ -243,3 +243,68 @@ button { cursor: pointer; }
 .hover-shadow:hover { box-shadow: 0 8px 24px rgba(0,0,0,0.18); }
 .card-smooth { @apply transition-shadow; }
 .pressable:active { transform: translateY(0.5px); }
+
+/* --- iOS Safari glass fix (без зміни теми) --- */
+/* iOS: для елементів, де вже Є blur (glasscard / glasscardMd / glasscardnorounded) */
+.glasscard,
+.glasscardnorounded {
+  /* tailwind backdrop-blur-md ≈ blur(12px) */
+  -webkit-backdrop-filter: blur(12px);
+  /* залишаємо ваш backdrop-blur-md як є; -webkit- варіант лише для Safari */
+  background-clip: padding-box;
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
+  overflow: visible;
+}
+.glasscardMd {
+  /* у вас явно задано blur(8px) — зберігаємо його */
+  -webkit-backdrop-filter: blur(8px);
+  background-clip: padding-box;
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
+  overflow: visible;
+}
+
+/* ВАЖЛИВО: .glasscardToday blur НЕ додаємо (там його і не було) */
+.glasscardToday {
+  background-clip: padding-box;
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  transform: translateZ(0);
+  will-change: transform;
+  isolation: isolate;
+  overflow: visible;
+}
+
+/* якщо скляна картка всередині елементів з анімацією трансформацій (хедер) */
+.header-mount,
+.header-mount--in {
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  perspective: 1000px;
+  contain: paint; /* не впливає на translateY */
+}
+
+/* точкове підсилення контрасту бордера в light, щоб у Safari не «сіріло» */
+html[data-theme="light"] .glasscard,
+html[data-theme="light"] .glasscardMd,
+html[data-theme="light"] .glasscardToday,
+html[data-theme="light"] .glasscardnorounded {
+  border-color: color-mix(in oklab, var(--border), transparent 20%);
+}
+
+/* необов'язково, але іноді лікує артефакт під фіксованою шапкою */
+@supports (-webkit-touch-callout: none) {
+  /* ті, що мають backdrop-blur-md (~12px) */
+  .glasscard,
+  .glasscardnorounded {
+    -webkit-backdrop-filter: blur(12px);
+  }
+  /* тут у тебе явно blur(8px) — зберігаємо */
+  .glasscardMd {
+    -webkit-backdrop-filter: blur(8px);
+  }
+}
