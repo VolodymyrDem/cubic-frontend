@@ -67,7 +67,7 @@ const ScheduleWeek: React.FC<Props> = ({ lessons, parity, weekStart }) => {
               key={d.key}
               className={[
                 isToday
-                  ? "glasscardToday rounded-xl p-4 border card-smooth hover-shadow hover-lift"
+                  ? "glasscardToday rounded-xl p-4 card-smooth hover-shadow hover-lift"
                   : "glasscard rounded-xl p-4 border border-[var(--border)] card-smooth hover-shadow hover-lift"
               ].join(" ")}
               // Якщо хочеш явну смужку зліва для "сьогодні":

@@ -30,8 +30,8 @@ const Header: React.FC = () => {
         </Link>
 
         {/* Nav (center) */}
-        <nav className="hidden md:flex gap-6 text-lg absolute left-1/2 -translate-x-1/2">
-          <NavLink to="/">Головна</NavLink>
+        <nav className="hidden font-semibold md:flex gap-6 font-semiboldtext-lg absolute left-1/2 -translate-x-1/2">
+
           {user?.role === "student" && (
             <>
               <NavLink to="/student/schedule">Мій розклад</NavLink>
@@ -56,7 +56,7 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-3 text-lg">
           {user ? (
             <button
-              className="btn text-lg px-4 py-2"
+              className="btn font-semiboldtext-lg px-4 py-2"
               onClick={() => {
                 logout();
                 nav("/");

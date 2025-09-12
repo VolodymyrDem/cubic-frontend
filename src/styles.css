@@ -1,5 +1,8 @@
 /* src/styles.css */
 @import "tailwindcss";
+body {
+  font-family: Helvetica;
+}
 
 /* ---------- Токени теми ---------- */
 :root {
@@ -44,7 +47,7 @@ html[data-theme="light"] {
   --border: #e5e7eb;
   --text: #0b0b0c;
   --muted: #555b68;
-  --primary: #71a7fd;
+  --primary: rgb(113, 167, 253);
   --primary-contrast: #ffffff;
   --ring: #3b82f666;
   --hero-dim: rgba(0, 0, 0, 0.288); 
@@ -206,7 +209,7 @@ button { cursor: pointer; }
 .glasscardToday {
   @apply border rounded-2xl relative;
   background-color: rgb(from var(--card) r g b / 0.60);
-  border-color: color-mix(in oklab, var(--primary), transparent 55%);
+  border-color: color-mix(in oklab, var(--primary), transparent 30%);
   box-shadow: 0 0 36px rgba(0, 0, 0, 0.18);
 }
 
@@ -291,7 +294,6 @@ button { cursor: pointer; }
 /* точкове підсилення контрасту бордера в light, щоб у Safari не «сіріло» */
 html[data-theme="light"] .glasscard,
 html[data-theme="light"] .glasscardMd,
-html[data-theme="light"] .glasscardToday,
 html[data-theme="light"] .glasscardnorounded {
   border-color: color-mix(in oklab, var(--border), transparent 20%);
 }
