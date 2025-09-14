@@ -11,13 +11,12 @@ import { BookOpen, ExternalLink, Video, FileText, ChevronLeft, Link2, Graduation
 const Chip: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="px-2 py-0.5 rounded-full bg-[var(--muted)]/10 text-[var(--muted)] text-xs">{children}</span>
 );
-
 const RowLink: React.FC<{ href: string; children: React.ReactNode; title?: string }> = ({ href, children, title }) => (
   <a
     href={href}
     target="_blank"
     rel="noreferrer"
-    className="inline-flex items-center gap-2 underline hover:opacity-80  "
+    className="inline-flex items-center gap-2 underline hover:opacity-80 break-all [overflow-wrap:anywhere]"
     title={title}
   >
     {children} <ExternalLink className="w-4 h-4" />
@@ -53,37 +52,42 @@ const StudentSubject: React.FC = () => {
     data?.upcomingHomework.find(h => h.classroomUrl)?.classroomUrl ||
     data?.recentGrades.find(g => g.classroomUrl)?.classroomUrl;
 
-  return (
-    <div className="space-y-5">
+ return (
+    // 2) На рівні сторінки — увімкнемо перенос по словам для всього вмісту
+    <div className="space-y-5 break-words [overflow-wrap:anywhere]">
       <Reveal className="flex items-center justify-between" delayMs={80} y={8} opacityFrom={0}>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <BookOpen className="w-7 h-7 text-primary" />
-          <div className="text-2xl font-semibold">{data.name}</div>
+          {/* 3) Назва предмету теж може бути довгою */}
+          <div className="text-2xl font-semibold break-words [overflow-wrap:anywhere]">{data.name}</div>
         </div>
         <Link
           to="/student/schedule"
-          className="inline-flex items-center gap-2 text-sm hover:opacity-80   hover-lift"
+          className="inline-flex items-center gap-2 text-sm hover:opacity-80 hover-lift"
         >
           <ChevronLeft className="w-4 h-4" /> До розкладу
         </Link>
       </Reveal>
 
       <Reveal y={6} blurPx={6} opacityFrom={0} delayMs={60}>
-        <div className="glasscard hover-lift rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3  ">
-          <div className="space-y-1">
+        <div className="glasscard hover-lift rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1 min-w-0">
             <div className="text-sm text-[var(--muted)]">Викладач</div>
-            <div className="font-medium">
+            <div className="font-medium break-words [overflow-wrap:anywhere]">
               {data.teacher.name}{" "}
-              {data.teacher.email && <span className="text-[var(--muted)]">· {data.teacher.email}</span>}
+              {data.teacher.email && (
+                <span className="text-[var(--muted)] break-words [overflow-wrap:anywhere]">· {data.teacher.email}</span>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* без змін */}
             {data.meetingUrl ? (
               <a
                 href={data.meetingUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] inline-flex items-center gap-2 hover-lift  "
+                className="px-3 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] inline-flex items-center gap-2 hover-lift"
               >
                 <Video className="w-4 h-4" /> Посилання на пару
               </a>
@@ -95,7 +99,7 @@ const StudentSubject: React.FC = () => {
                 href={classroomUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="px-3 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] inline-flex items-center gap-2 hover-lift  "
+                className="px-3 py-2 rounded-xl bg-[var(--primary)] text-[var(--primary-contrast)] inline-flex items-center gap-2 hover-lift"
               >
                 <GraduationCap className="w-4 h-4" /> Classroom
               </a>
@@ -108,7 +112,7 @@ const StudentSubject: React.FC = () => {
         <Reveal y={8} blurPx={8} opacityFrom={0} delayMs={90}>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Матеріали */}
-            <div className="glasscard hover-lift rounded-2xl p-4  ">
+            <div className="glasscard hover-lift rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold">Матеріали</div>
                 <Chip>{data.materials.length}</Chip>
@@ -121,7 +125,8 @@ const StudentSubject: React.FC = () => {
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <FileText className="w-4 h-4" />
-                      <div className="truncate">{m.title}</div>
+                      {/* 4) Замість truncate — перенос по словам + контроль ширини */}
+                      <div className="break-words [overflow-wrap:anywhere] max-w-full">{m.title}</div>
                     </div>
                     <RowLink href={m.url}>Відкрити</RowLink>
                   </div>
@@ -130,7 +135,7 @@ const StudentSubject: React.FC = () => {
             </div>
 
             {/* Найближчі ДЗ */}
-            <div className="glasscard hover-lift rounded-2xl p-4  ">
+            <div className="glasscard hover-lift rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold">Найближчі ДЗ</div>
                 <Chip>{data.upcomingHomework.length}</Chip>
@@ -141,7 +146,7 @@ const StudentSubject: React.FC = () => {
                 )}
                 {data.upcomingHomework.map(hw => (
                   <div key={hw.id} className="py-2 border-b border-[var(--border)]/50 last:border-b-0">
-                    <div className="font-medium">{hw.text}</div>
+                    <div className="font-medium break-words [overflow-wrap:anywhere]">{hw.text}</div>
                     <div className="text-sm text-[var(--muted)]">
                       Дедлайн: {new Date(hw.dueDate).toLocaleDateString()}
                     </div>
@@ -156,7 +161,7 @@ const StudentSubject: React.FC = () => {
             </div>
 
             {/* Останні оцінки */}
-            <div className="glasscard hover-lift rounded-2xl p-4  ">
+            <div className="glasscard hover-lift rounded-2xl p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="font-semibold">Останні оцінки</div>
                 <Chip>
@@ -172,7 +177,10 @@ const StudentSubject: React.FC = () => {
                     className="flex items-start justify-between gap-3 py-2 border-b border-[var(--border)]/50 last:border-b-0"
                   >
                     <div className="min-w-0">
-                      <div className="font-medium truncate">{g.comment ?? "Оцінка"}</div>
+                      {/* 5) Приберемо truncate, щоб текст переносився */}
+                      <div className="font-medium break-words [overflow-wrap:anywhere]">
+                        {g.comment ?? "Оцінка"}
+                      </div>
                       <div className="text-sm text-[var(--muted)]">
                         {new Date(g.createdAt).toLocaleDateString()}
                       </div>
@@ -203,9 +211,9 @@ const StudentSubject: React.FC = () => {
 
       {data.description && (
         <Reveal y={6} blurPx={6} opacityFrom={0} delayMs={60}>
-          <div className="glasscard hover-lift rounded-2xl p-4  ">
+          <div className="glasscard hover-lift rounded-2xl p-4">
             <div className="font-semibold mb-2">Про курс</div>
-            <p className="text-[var(--muted)]">{data.description}</p>
+            <p className="text-[var(--muted)] break-words [overflow-wrap:anywhere]">{data.description}</p>
           </div>
         </Reveal>
       )}
