@@ -27,6 +27,7 @@ import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import AdminStudents from "@/pages/admin/AdmineStudents";
 import StudentSubject from "@/pages/student/StudentSubject"; // ✅ нове
+import TeacherSubject from "@/pages/teacher/TeacherSubject";
 
 export const router = createBrowserRouter(
   [
@@ -70,6 +71,8 @@ export const router = createBrowserRouter(
             { path: "dashboard", element: <TeacherDashboard /> },
             { path: "schedule", element: <TeacherSchedule /> },
             { path: "students", element: <TeacherStudents /> },
+            { path: "subject/:subjectId", element: <TeacherSubject />},
+
           ],
         },
 
