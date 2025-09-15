@@ -2,11 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+  (function () {
+    try {
+      var t = localStorage.getItem('fh.theme') || 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  })();
+</script>
+
     <link rel="icon" type="image/x-icon" href="/cubic-frontend/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cubic helper</title>
-    <script type="module" crossorigin src="/cubic-frontend/assets/index-Bu4M51N8.js"></script>
-    <link rel="stylesheet" crossorigin href="/cubic-frontend/assets/index-0D2tOyoj.css">
+    <script type="module" crossorigin src="/cubic-frontend/assets/index-DcT7D-fq.js"></script>
+    <link rel="stylesheet" crossorigin href="/cubic-frontend/assets/index-Bqy-oqPC.css">
   </head>
  <body class="bg-[var(--surface)] text-[var(--text)] antialiased">
     <div id="root"></div>
