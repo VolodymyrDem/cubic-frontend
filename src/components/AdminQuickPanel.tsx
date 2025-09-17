@@ -3,11 +3,10 @@ import { fetchAdminStats, pushAdminChange } from "@/lib/fakeApi/admin";
 import { Users, BookOpen } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ViewModeToggle from "./ViewModeToggle";
-import { useAuth } from "@/types/auth";
-import { getViewMode, setViewMode, type ViewMode } from "@/lib/utils/prefs";
 import Toast from "@/components/Toast";
+import type { ViewMode } from "@/lib/utils/prefs";
 
-type Stats = { students: number; teachers: number; courses: number; };
+type Stats = { students: number; teachers: number; courses: number };
 
 const StatTile: React.FC<{
   to: string;
@@ -30,23 +29,18 @@ const StatTile: React.FC<{
   </Link>
 );
 
-const AdminQuickPanel: React.FC = () => {
+const AdminQuickPanel: React.FC<{
+  value: ViewMode;
+  onChange: (m: ViewMode) => void;
+}> = ({ value, onChange }) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const nav = useNavigate();
-  const { user } = useAuth();
-  const uid = user?.id ?? "";
-  const [mode, setMode] = useState<ViewMode>(() =>
-    uid ? getViewMode(uid) : "view"
-  );
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     fetchAdminStats().then(setStats);
   }, []);
-  useEffect(() => {
-    if (uid) setMode(getViewMode(uid));
-  }, [uid]);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 1024);
@@ -60,16 +54,21 @@ const AdminQuickPanel: React.FC = () => {
     setTimeout(() => setToast(null), 1000);
   };
 
-  const onModeChange = (m: ViewMode) => {
-    setMode(m);
-    if (uid) setViewMode(uid, m);
-  };
-
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {!isMobile && (
-          <ViewModeToggle value={mode} onChange={onModeChange} />
+          <ViewModeToggle
+            value={value}
+            onChange={(m) => {
+              onChange(m);
+              flash(
+                m === "view"
+                  ? "Увімкнено режим перегляду"
+                  : "Увімкнено режим редагування"
+              );
+            }}
+          />
         )}
         <StatTile
           to="/admin/students"
@@ -94,18 +93,29 @@ const AdminQuickPanel: React.FC = () => {
         />
       </div>
 
-      {/* Нижній блок дій під плитками */}
       {!isMobile && (
         <div className="mt-4">
-          {mode === "view" ? (
-            <button
-              className="btn w-full py-3 rounded-2xl hover-shadow"
-              onClick={() => {
-                /* TODO: export */
-              }}
-            >
-              Export to PDF
-            </button>
+          {value === "view" ? (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <button
+                className="btn py-3 rounded-2xl hover-shadow"
+                onClick={() => flash("Експорт усього розкладу")}
+              >
+                Експортувати весь розклад
+              </button>
+              <button
+                className="btn py-3 rounded-2xl hover-shadow"
+                onClick={() => flash("Експорт обраного курсу")}
+              >
+                Експортувати розклад курсу
+              </button>
+              <button
+                className="btn py-3 rounded-2xl hover-shadow"
+                onClick={() => flash("Експорт бакалаврів / магістрів")}
+              >
+                Експортувати розклад бакалаврів / магістрів
+              </button>
+            </div>
           ) : (
             <div className="grid gap-3 sm:grid-cols-3">
               <button
@@ -120,20 +130,19 @@ const AdminQuickPanel: React.FC = () => {
                   flash("solve is done");
                 }}
               >
-                solve
+                Вирішити
               </button>
-
               <button
                 className="btn py-3 rounded-2xl hover-shadow"
                 onClick={() => flash("optimize is done")}
               >
-                optimize
+                Оптимізувати
               </button>
               <button
                 className="btn py-3 rounded-2xl hover-shadow"
                 onClick={() => nav("/admin/logs")}
               >
-                logs
+                Логи
               </button>
             </div>
           )}

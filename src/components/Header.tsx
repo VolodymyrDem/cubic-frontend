@@ -22,7 +22,7 @@ const Header: React.FC = () => {
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
-      <div className={cls("mt-4 glasscard px-6 py-5 flex items-center justify-between relative")}>
+      <div className={cls("mt-4 glasscard hover-lift px-6 py-5 flex items-center justify-between relative")}>
         {/* Logo (left) */}
         <Link to="/" className="flex items-center gap-3 font-semibold text-xl">
           <img src={favicon} alt="Logo" className=" hover-lift h-8 w-8" />
