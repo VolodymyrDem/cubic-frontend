@@ -79,7 +79,7 @@ const CellCard: React.FC<{
           />
         ) : (
           lesson.pinned && (
-            <Pin className="h-4 w-4 text-primary" title="Закріплена пара" />
+            <Pin className="h-4 w-4 text-primary"/>
           )
         )}
       </div>
