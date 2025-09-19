@@ -1,5 +1,5 @@
 // src/components/FacultyScheduleTable.tsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useLayoutEffect } from "react";
 import {
   fetchFacultySchedule,
   saveFacultySchedule,
@@ -24,6 +24,7 @@ import {
   Shuffle,
 } from "lucide-react";
 import { createPortal } from "react-dom";
+import NiceSelect from "@/ui/NiceSelect";
 
 /* ----- константи часу та днів (4 пари) ----- */
 const TIMES: Record<1 | 2 | 3 | 4, { start: string; end: string }> = {
@@ -98,11 +99,39 @@ const ParityToggle: React.FC<{
   );
 };
 
+// ——— Додати вгорі файлу (поруч із іншими дрібними компонентами) ———
+const AddSlotButton: React.FC<{
+  label: string;
+  onClick: () => void;
+  title?: string;
+}> = ({ label, onClick, title }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title={title}
+    // ✅ гарантовано однакова ширина, але не ширше за колонку
+    style={{ width: "min(280px, 100%)" }}
+    className={[
+      "block mx-auto", // центр
+      "px-4 py-3 rounded-2xl", // форма
+      "border-2 border-dashed border-[var(--border)]/70",
+      "bg-[var(--surface)]/40 hover:bg-[var(--surface-2)]/60",
+      "text-[var(--text)]/90",
+      "flex items-center justify-center gap-2",
+      "transition hover-lift focus:outline-none focus:ring-2 focus:ring-[var(--ring)]",
+      "select-none",
+    ].join(" ")}
+  >
+    <Plus className="h-4 w-4 opacity-80" />
+    <span className="font-medium">{label}</span>
+  </button>
+);
+
 /* ---------- картка пари (перегляд) ---------- */
 const CellCard: React.FC<{
   lesson: FacultyLesson;
   dense?: boolean;
-  onDragStart: (l: FacultyLesson) => void;
+  onDragStart: (l: FacultyLesson | null) => void;
   onTogglePin: (id: string) => void;
   onDelete: (id: string) => void;
   onStartEdit: (l: FacultyLesson) => void;
@@ -132,6 +161,11 @@ const CellCard: React.FC<{
     draggable={editable && !lesson.pinned}
     onDragStart={(e) => {
       if (!editable || lesson.pinned) return;
+      // чіткий сигнал браузеру про перенос
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.dropEffect = "move";
+      } catch {}
       e.dataTransfer.setData("text/plain", lesson.id);
       onDragStart(lesson);
     }}
@@ -229,36 +263,36 @@ const SelectorRow: React.FC<{
   setDense,
 }) => (
   <div className="flex flex-wrap gap-3 mb-4 items-center">
-    <select
-      className="select"
+    <NiceSelect
+      ariaLabel="Рівень навчання"
       value={level}
-      onChange={(e) => setLevel(e.target.value as Level)}
-    >
-      <option value="bachelor">Бакалавр</option>
-      <option value="master">Магістр</option>
-    </select>
+      onChange={(v) => setLevel(v as Level)}
+      options={[
+        { value: "bachelor", label: "Бакалавр" },
+        { value: "master", label: "Магістр" },
+      ]}
+    />
 
-    <select
-      className="select"
-      value={course}
-      onChange={(e) => setCourse(Number(e.target.value))}
-    >
-      {(level === "bachelor" ? [1, 2, 3, 4] : [1, 2]).map((c) => (
-        <option key={c} value={c}>
-          {c} курс
-        </option>
-      ))}
-    </select>
+    <NiceSelect
+      ariaLabel="Курс"
+      value={String(course)}
+      onChange={(v) => setCourse(Number(v))}
+      options={(level === "bachelor" ? [1, 2, 3, 4] : [1, 2]).map((c) => ({
+        value: String(c),
+        label: `${c} курс`,
+      }))}
+    />
 
-    <select
-      className="select"
+    <NiceSelect
+      ariaLabel="Парність тижня"
       value={parity}
-      onChange={(e) => setParity(e.target.value as Parity)}
-    >
-      <option value="any">Будь-який тиждень</option>
-      <option value="even">Парний</option>
-      <option value="odd">Непарний</option>
-    </select>
+      onChange={(v) => setParity(v as Parity)}
+      options={[
+        { value: "any", label: "Будь-який тиждень" },
+        { value: "even", label: "Парний" },
+        { value: "odd", label: "Непарний" },
+      ]}
+    />
 
     <label className="inline-flex items-center gap-2 ml-auto text-sm cursor-pointer">
       <input
@@ -271,8 +305,6 @@ const SelectorRow: React.FC<{
     </label>
   </div>
 );
-
-
 
 const FacultyScheduleTable: React.FC<{
   editable: boolean;
@@ -304,17 +336,24 @@ const FacultyScheduleTable: React.FC<{
   const [snapTitle, setSnapTitle] = useState("");
   const [snapComment, setSnapComment] = useState("");
   const [snapBusy, setSnapBusy] = useState(false);
-const sortGroups = (a: string, b: string) =>
-  a.localeCompare(b, "uk", { numeric: true, sensitivity: "base" });
+
+  const sortGroups = (a: string, b: string) =>
+    a.localeCompare(b, "uk", { numeric: true, sensitivity: "base" });
+
+  /* ---------- DnD helpers ---------- */
+  const allowDrop = (e: React.DragEvent) => {
+    if (!editable) return;
+    e.preventDefault();
+    try {
+      e.dataTransfer.dropEffect = "move";
+    } catch {}
+  };
 
   const handleConfirmSnapshot = async () => {
     if (!snapTitle.trim() || !snapComment.trim()) return;
     try {
       setSnapBusy(true);
-      // 1) зберегти поточний актуальний розклад (твоя існуюча логіка)
       await saveAll(); // збереже у fakeApi твій “активний” стан
-
-      // 2) створити знімок у Архіві
       await createScheduleSnapshot(
         snapTitle.trim(),
         snapComment.trim(),
@@ -322,8 +361,6 @@ const sortGroups = (a: string, b: string) =>
         user?.name ?? "Admin",
         allLessons // зберігаємо весь набір пар
       );
-
-      // 3) закрити модалку та очистити поля
       setSnapOpen(false);
       setSnapTitle("");
       setSnapComment("");
@@ -346,12 +383,14 @@ const sortGroups = (a: string, b: string) =>
   }, []);
 
   useEffect(() => {
-  if (snapOpen) {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }
-}, [snapOpen]);
+    if (snapOpen) {
+      const prev = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = prev;
+      };
+    }
+  }, [snapOpen]);
 
   const viewLessons = useMemo(
     () => filterFacultyLessons({ lessons: allLessons, course, parity }),
@@ -359,15 +398,14 @@ const sortGroups = (a: string, b: string) =>
   );
 
   const allGroups = useMemo(() => {
-  const set = new Set<string>();
-  viewLessons.forEach((l) => {
-    const g = (l.group ?? (l as any).speciality ?? "").toString().trim();
-    if (g) set.add(g);
-  });
-  // 🔒 фіксуємо стабільний порядок колонок
-  return Array.from(set).sort(sortGroups);
-}, [viewLessons]);
-
+    const set = new Set<string>();
+    viewLessons.forEach((l) => {
+      const g = (l.group ?? (l as any).speciality ?? "").toString().trim();
+      if (g) set.add(g);
+    });
+    // 🔒 фіксуємо стабільний порядок колонок
+    return Array.from(set).sort(sortGroups);
+  }, [viewLessons]);
 
   const maxPage = Math.max(0, Math.ceil(allGroups.length / pageSize) - 1);
   useEffect(() => {
@@ -526,8 +564,35 @@ const sortGroups = (a: string, b: string) =>
   ) => {
     if (!editable) return;
     e.preventDefault();
+    e.stopPropagation();
     const id = e.dataTransfer.getData("text/plain");
     if (id) moveLesson(id, coords);
+    setDragging(null);
+  };
+
+  // drop на пусту зону з конкретизацією парності
+  const dropIntoEmpty = (
+    e: React.DragEvent,
+    coords: {
+      weekday: 1 | 2 | 3 | 4 | 5 | 6;
+      pair: 1 | 2 | 3 | 4;
+      group: string;
+    },
+    forceParity: Parity
+  ) => {
+    if (!editable) return;
+    e.preventDefault();
+    const id = e.dataTransfer.getData("text/plain");
+    if (!id) return;
+    moveLesson(id, coords);
+    // після переміщення — виставляємо парність
+    setAllLessons((prev) =>
+      prev.map((l) =>
+        l.id === id
+          ? { ...l, parity: forceParity, time: TIMES[coords.pair] }
+          : l
+      )
+    );
     setDragging(null);
   };
 
@@ -579,6 +644,58 @@ const sortGroups = (a: string, b: string) =>
     };
   }, [groups]);
 
+  const [rowHeights, setRowHeights] = useState<
+    Record<string, { odd: number; even: number }>
+  >({});
+
+  const baseHalfMin = dense ? 40 : 52; // мінімальна висота однієї половини
+  const HALF_GAP_PX = 4;
+
+  useLayoutEffect(() => {
+  const raf = requestAnimationFrame(() => {
+    // збираємо всі вузли з позначками половинок/any
+    const nodes =
+      scrollRef.current?.querySelectorAll<HTMLElement>('[data-row][data-half]');
+
+    // тимчасова мапа «рядок -> макс. висоти»
+    const tmp: Record<string, { odd: number; even: number; both?: number }> = {};
+
+    nodes?.forEach((el) => {
+      const row = el.dataset.row as string; // "weekday-pair"
+      const half = el.dataset.half as "odd" | "even" | "both";
+      const h = el.scrollHeight;
+
+      const entry = tmp[row] ?? { odd: baseHalfMin, even: baseHalfMin };
+      if (half === "odd" || half === "even") {
+        entry[half] = Math.max(entry[half], h);
+      } else {
+        entry.both = Math.max(entry.both ?? 0, h);
+      }
+      tmp[row] = entry;
+    });
+
+    // якщо в рядку є картка any і вона вища за суму половинок,
+    // «розкидуємо» надлишок між odd/even
+    Object.values(tmp).forEach((v) => {
+      if (v.both) {
+        const sum = v.odd + v.even + HALF_GAP_PX;
+        if (v.both > sum) {
+          const extra = v.both - sum;
+          v.odd += Math.ceil(extra / 2);
+          v.even += Math.floor(extra / 2);
+        }
+      }
+    });
+
+    // у стан зберігаємо тільки odd/even
+    const next: Record<string, { odd: number; even: number }> = {};
+    Object.entries(tmp).forEach(([k, v]) => (next[k] = { odd: v.odd, even: v.even }));
+    setRowHeights(next);
+  });
+
+  return () => cancelAnimationFrame(raf);
+}, [viewLessons, groups, dense, editingId, baseHalfMin]);
+
   /* ---------- інлайн-редактор (вставляється замість картки) ---------- */
   const renderInlineEditor = () => (
     <div
@@ -597,20 +714,14 @@ const sortGroups = (a: string, b: string) =>
           }
         />
         <div className="flex gap-2">
-          <select
-            className="select flex-1 hover-lift glasscard p-1"
-            value={editBuf.teacher ?? ""}
-            onChange={(e) =>
-              setEditBuf((prev) => ({ ...prev, teacher: e.target.value }))
-            }
-          >
-            <option value="">Викладач</option>
-            {teachers.map((t) => (
-              <option key={t.id} value={t.name}>
-                {t.name}
-              </option>
-            ))}
-          </select>
+          <NiceSelect
+            className="flex-1"
+            ariaLabel="Викладач"
+            placeholder="Викладач"
+            value={editBuf.teacher || undefined}
+            onChange={(v) => setEditBuf((prev) => ({ ...prev, teacher: v }))}
+            options={teachers.map((t) => ({ value: t.name, label: t.name }))}
+          />
           <input
             className="input flex-1 hover-lift"
             placeholder="Аудиторія"
@@ -832,7 +943,14 @@ const sortGroups = (a: string, b: string) =>
                         };
 
                         if (editable && isEmpty) {
-                          // 100% порожня комірка: показуємо три окремі дії одна під одною
+                          // 100% порожня комірка: 3 кнопки однакового розміру,
+                          // а висота блоку — під найбільшу «півклітинку» в рядку
+                          const rowKey = `${weekday}-${pair}`;
+                          const minOdd = rowHeights[rowKey]?.odd ?? baseHalfMin;
+                          const minEven =
+                            rowHeights[rowKey]?.even ?? baseHalfMin;
+                          const totalMin = minOdd + minEven + HALF_GAP_PX;
+
                           return (
                             <td
                               key={group}
@@ -840,60 +958,87 @@ const sortGroups = (a: string, b: string) =>
                                 pairIdx > 0 ? "pair-divider" : ""
                               }`}
                             >
-                              <div className="flex flex-col gap-2 ">
-                                <button
-                                  className="hover-lift rounded-xl border border-dashed text-xs mx-2 py-3 text-[var(--muted)] hover:bg-[var(--surface-2)]"
-                                  onClick={() =>
-                                    createDraftLesson({
-                                      weekday,
-                                      pair,
-                                      group,
-                                      parity: "odd",
-                                    })
+                              <div
+                                className="flex flex-col items-stretch gap-2 p-1"
+                                style={{ minHeight: totalMin }}
+                              >
+                                <div
+                                  onDragOver={allowDrop}
+                                  onDrop={(e) =>
+                                    dropIntoEmpty(
+                                      e,
+                                      { weekday, pair, group },
+                                      "odd"
+                                    )
                                   }
-                                  title="Додати пару (odd)"
                                 >
-                                  <Plus className="inline h-3 w-3 mr-1" />{" "}
-                                  Додати непарну пару
-                                </button>
+                                  <AddSlotButton
+                                    label="Додати непарну пару"
+                                    title="Додати пару (odd)"
+                                    onClick={() =>
+                                      createDraftLesson({
+                                        weekday,
+                                        pair,
+                                        group,
+                                        parity: "odd",
+                                      })
+                                    }
+                                  />
+                                </div>
 
-                                <button
-                                  className="hover-lift mx-2 rounded-xl border border-dashed text-xs py-3 text-[var(--muted)] hover:bg-[var(--surface-2)]"
-                                  onClick={() =>
-                                    createDraftLesson({
-                                      weekday,
-                                      pair,
-                                      group,
-                                      parity: "any",
-                                    })
+                                <div
+                                  onDragOver={allowDrop}
+                                  onDrop={(e) =>
+                                    dropIntoEmpty(
+                                      e,
+                                      { weekday, pair, group },
+                                      "any"
+                                    )
                                   }
-                                  title="Створити (any)"
                                 >
-                                  <Plus className="hover-lift inline h-3 w-3 mr-1" />{" "}
-                                  Додати пару
-                                </button>
+                                  <AddSlotButton
+                                    label="Додати пару"
+                                    title="Додати пару (будь-який тиждень)"
+                                    onClick={() =>
+                                      createDraftLesson({
+                                        weekday,
+                                        pair,
+                                        group,
+                                        parity: "any",
+                                      })
+                                    }
+                                  />
+                                </div>
 
-                                <button
-                                  className="hover-lift mx-2 rounded-xl border border-dashed text-xs py-3 text-[var(--muted)] hover:bg-[var(--surface-2)]"
-                                  onClick={() =>
-                                    createDraftLesson({
-                                      weekday,
-                                      pair,
-                                      group,
-                                      parity: "even",
-                                    })
+                                <div
+                                  onDragOver={allowDrop}
+                                  onDrop={(e) =>
+                                    dropIntoEmpty(
+                                      e,
+                                      { weekday, pair, group },
+                                      "even"
+                                    )
                                   }
-                                  title="Додати пару (even)"
                                 >
-                                  <Plus className="inline h-3 w-3 mr-1" />{" "}
-                                  Додати парну пару
-                                </button>
+                                  <AddSlotButton
+                                    label="Додати парну пару"
+                                    title="Додати пару (even)"
+                                    onClick={() =>
+                                      createDraftLesson({
+                                        weekday,
+                                        pair,
+                                        group,
+                                        parity: "even",
+                                      })
+                                    }
+                                  />
+                                </div>
                               </div>
                             </td>
                           );
                         }
 
-                        // НЕ порожньо: залишаємо логіку any / odd+even
+                        // НЕ порожньо: вирівнюємо висоти половинок (odd/even) і блоку any
                         return (
                           <td
                             key={group}
@@ -903,161 +1048,197 @@ const sortGroups = (a: string, b: string) =>
                           >
                             <div
                               className="grid grid-rows-2 gap-1 relative"
-                              onDragOver={(e) => editable && e.preventDefault()}
+                              onDragOver={allowDrop}
                             >
                               {anyItems.length > 0 ? (
-                                <div
-                                  className="row-span-2"
-                                  onDrop={(e) => {
-                                    onDropToCell(e, { weekday, pair, group });
-                                  }}
-                                >
-                                  {anyItems.map((l) =>
-                                    editingId === l.id ? (
-                                      <React.Fragment key={l.id}>
-                                        {renderInlineEditor()}
-                                      </React.Fragment>
-                                    ) : (
-                                      <CellCard
-                                        key={l.id}
-                                        lesson={l}
-                                        dense={dense}
-                                        onDragStart={setDragging}
-                                        onTogglePin={togglePin}
-                                        onDelete={deleteLesson}
-                                        onStartEdit={startEdit}
-                                        editable={editable}
-                                        isDraft={draftIds.has(l.id)}
-                                      />
-                                    )
-                                  )}
+                                // ANY займає дві половини — задаємо мінімальну сумарну висоту
+                                (() => {
+                                  const rowKey = `${weekday}-${pair}`;
+                                  const minAny =
+                                    (rowHeights[rowKey]?.odd ?? baseHalfMin) +
+                                    (rowHeights[rowKey]?.even ?? baseHalfMin) +
+                                    HALF_GAP_PX;
 
-                                  {/* швидке розщеплення any -> even + odd(draft) */}
-                                  {editable && anyItems[0] && (
-                                    <div className="flex flex-col gap-1">
-                                      <button
-                                        className=" hover-lift btn px-2 py-1 m-1 rounded-md"
-                                        title="Розщепити на odd/even (odd вгорі)"
-                                        onClick={() => {
-                                          const a = anyItems[0];
-                                          setAllLessons((prev) =>
-                                            prev.map((x) =>
-                                              x.id === a.id
-                                                ? { ...x, parity: "even" }
-                                                : x
-                                            )
-                                          );
-                                          createDraftLesson({
-                                            weekday,
-                                            pair,
-                                            group,
-                                            parity: "odd",
-                                          });
-                                        }}
-                                      >
-                                        <Shuffle className=" hover-lift h-4 w-4" />
-                                      </button>
+                                  return (
+                                    <div
+                                      className="row-span-2"
+                                      data-row={rowKey}
+                                      data-half="both"
+                                      style={{ minHeight: minAny }}
+                                      onDragOver={allowDrop}
+                                      onDrop={(e) => {
+                                        onDropToCell(e, {
+                                          weekday,
+                                          pair,
+                                          group,
+                                        });
+                                      }}
+                                    >
+                                      {anyItems.map((l) =>
+                                        editingId === l.id ? (
+                                          <React.Fragment key={l.id}>
+                                            {renderInlineEditor()}
+                                          </React.Fragment>
+                                        ) : (
+                                          <CellCard
+                                            key={l.id}
+                                            lesson={l}
+                                            dense={dense}
+                                            onDragStart={setDragging}
+                                            onTogglePin={togglePin}
+                                            onDelete={deleteLesson}
+                                            onStartEdit={startEdit}
+                                            editable={editable}
+                                            isDraft={draftIds.has(l.id)}
+                                          />
+                                        )
+                                      )}
+
+                                      {/* швидке розщеплення any -> even + odd(draft) */}
+                                      {editable && anyItems[0] && (
+                                        <div className="flex flex-col gap-1">
+                                          <button
+                                            className=" hover-lift btn px-2 py-1 m-1 rounded-md"
+                                            title="Розщепити на odd/even (odd вгорі)"
+                                            onClick={() => {
+                                              const a = anyItems[0];
+                                              setAllLessons((prev) =>
+                                                prev.map((x) =>
+                                                  x.id === a.id
+                                                    ? { ...x, parity: "even" }
+                                                    : x
+                                                )
+                                              );
+                                              createDraftLesson({
+                                                weekday,
+                                                pair,
+                                                group,
+                                                parity: "odd",
+                                              });
+                                            }}
+                                          >
+                                            <Shuffle className=" hover-lift h-4 w-4" />
+                                          </button>
+                                        </div>
+                                      )}
                                     </div>
-                                  )}
-                                </div>
+                                  );
+                                })()
                               ) : (
                                 <>
                                   {/* TOP (odd) */}
-                                  <div
-                                    style={{ minHeight: dense ? 40 : 52 }}
-                                    className="rounded-md"
-                                    onDrop={(e) => dropToHalf(e, "top")}
-                                  >
-                                    {oddItems.length ? (
-                                      oddItems.map((l) =>
-                                        editingId === l.id ? (
-                                          <React.Fragment key={l.id}>
-                                            {renderInlineEditor()}
-                                          </React.Fragment>
-                                        ) : (
-                                          <CellCard
-                                            key={l.id}
-                                            lesson={l}
-                                            dense={dense}
-                                            onDragStart={setDragging}
-                                            onTogglePin={togglePin}
-                                            onDelete={deleteLesson}
-                                            onStartEdit={startEdit}
-                                            editable={editable}
-                                            isDraft={draftIds.has(l.id)}
-                                          />
-                                        )
-                                      )
-                                    ) : editable ? (
-                                       <div className="flex flex-col gap-2 ">
-                                      <button
-className="hover-lift rounded-xl border border-dashed text-xs mx-2 py-3 text-[var(--muted)] hover:bg-[var(--surface-2)]"                                        onClick={() =>
-                                          createDraftLesson({
-                                            weekday,
-                                            pair,
-                                            group,
-                                            parity: "odd",
-                                          })
-                                        }
-                                        title="Додати пару (odd)"
+                                  {(() => {
+                                    const rowKey = `${weekday}-${pair}`;
+                                    const minH =
+                                      rowHeights[rowKey]?.odd ?? baseHalfMin;
+
+                                    return (
+                                      <div
+                                        data-row={rowKey}
+                                        data-half="odd"
+                                        style={{ minHeight: minH }}
+                                        className="rounded-md"
+                                        onDragOver={allowDrop}
+                                        onDrop={(e) => dropToHalf(e, "top")}
                                       >
-                                        <Plus className="inline h-3 w-3 mr-1" />{" "}
-                                        Додати непарну пару
-                                      </button>
+                                        {oddItems.length ? (
+                                          oddItems.map((l) =>
+                                            editingId === l.id ? (
+                                              <React.Fragment key={l.id}>
+                                                {renderInlineEditor()}
+                                              </React.Fragment>
+                                            ) : (
+                                              <CellCard
+                                                key={l.id}
+                                                lesson={l}
+                                                dense={dense}
+                                                onDragStart={setDragging}
+                                                onTogglePin={togglePin}
+                                                onDelete={deleteLesson}
+                                                onStartEdit={startEdit}
+                                                editable={editable}
+                                                isDraft={draftIds.has(l.id)}
+                                              />
+                                            )
+                                          )
+                                        ) : editable ? (
+                                          <div className="p-1">
+                                            <AddSlotButton
+                                              label="Додати непарну пару"
+                                              title="Додати пару (odd)"
+                                              onClick={() =>
+                                                createDraftLesson({
+                                                  weekday,
+                                                  pair,
+                                                  group,
+                                                  parity: "odd",
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="h-3" />
+                                        )}
                                       </div>
-                                    ) : (
-                                      <div className="h-3" />
-                                    )}
-                                  </div>
+                                    );
+                                  })()}
 
                                   {/* BOTTOM (even) */}
-                                  <div
-                                    style={{ minHeight: dense ? 40 : 52 }}
-                                    className="rounded-md"
-                                    onDrop={(e) => dropToHalf(e, "bottom")}
-                                  >
-                                    {evenItems.length ? (
-                                      evenItems.map((l) =>
-                                        editingId === l.id ? (
-                                          <React.Fragment key={l.id}>
-                                            {renderInlineEditor()}
-                                          </React.Fragment>
-                                        ) : (
-                                          <CellCard
-                                            key={l.id}
-                                            lesson={l}
-                                            dense={dense}
-                                            onDragStart={setDragging}
-                                            onTogglePin={togglePin}
-                                            onDelete={deleteLesson}
-                                            onStartEdit={startEdit}
-                                            editable={editable}
-                                            isDraft={draftIds.has(l.id)}
-                                          />
-                                        )
-                                      )
-                                    ) : editable ? (
-                                                                    <div className="flex flex-col gap-2 ">
-                                      <button
-                                  className="hover-lift rounded-xl border border-dashed text-xs mx-2 py-3 text-[var(--muted)] hover:bg-[var(--surface-2)]"
-                                        onClick={() =>
-                                          createDraftLesson({
-                                            weekday,
-                                            pair,
-                                            group,
-                                            parity: "even",
-                                          })
-                                        }
-                                        title="Додати пару (even)"
+                                  {(() => {
+                                    const rowKey = `${weekday}-${pair}`;
+                                    const minH =
+                                      rowHeights[rowKey]?.even ?? baseHalfMin;
+
+                                    return (
+                                      <div
+                                        data-row={rowKey}
+                                        data-half="even"
+                                        style={{ minHeight: minH }}
+                                        className="rounded-md"
+                                        onDragOver={allowDrop}
+                                        onDrop={(e) => dropToHalf(e, "bottom")}
                                       >
-                                        <Plus className="inline h-3 w-3 mr-1" />{" "}
-                                        Додати парну пару
-                                      </button>
+                                        {evenItems.length ? (
+                                          evenItems.map((l) =>
+                                            editingId === l.id ? (
+                                              <React.Fragment key={l.id}>
+                                                {renderInlineEditor()}
+                                              </React.Fragment>
+                                            ) : (
+                                              <CellCard
+                                                key={l.id}
+                                                lesson={l}
+                                                dense={dense}
+                                                onDragStart={setDragging}
+                                                onTogglePin={togglePin}
+                                                onDelete={deleteLesson}
+                                                onStartEdit={startEdit}
+                                                editable={editable}
+                                                isDraft={draftIds.has(l.id)}
+                                              />
+                                            )
+                                          )
+                                        ) : editable ? (
+                                          <div className="p-1">
+                                            <AddSlotButton
+                                              label="Додати парну пару"
+                                              title="Додати пару (even)"
+                                              onClick={() =>
+                                                createDraftLesson({
+                                                  weekday,
+                                                  pair,
+                                                  group,
+                                                  parity: "even",
+                                                })
+                                              }
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="h-3" />
+                                        )}
                                       </div>
-                                    ) : (
-                                      <div className="h-3" />
-                                    )}
-                                  </div>
+                                    );
+                                  })()}
                                 </>
                               )}
                             </div>
@@ -1076,82 +1257,87 @@ className="hover-lift rounded-xl border border-dashed text-xs mx-2 py-3 text-[va
       <div className="mt-3 flex items-center gap-3">
         <label className="text-sm text-[var(--muted)]">
           Показувати колонок:
-          <select
-            className="select ml-2"
-            value={pageSize}
-            onChange={(e) => {
-              setPageSize(Number(e.target.value));
-              setPage(0);
-            }}
-          >
-            {[4, 6, 8, 10].map((n) => (
-              <option key={n} value={n}>
-                {n}
-              </option>
-            ))}
-          </select>
         </label>
-      </div>
-      {snapOpen && createPortal(
-  <div className="fixed inset-0 z-[1000] flex items-center justify-center">
-    <div
-      className="absolute inset-0 bg-black/50"
-      onClick={() => !snapBusy && setSnapOpen(false)}
-    />
-    <div
-      className="glasscard relative z-10 w-[min(560px,92vw)] max-h-[85vh] overflow-auto p-5 rounded-2xl"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="snap-title"
-    >
-      <div id="snap-title" className="text-lg font-semibold mb-3">
-        Зберегти до Архіву
+        <NiceSelect
+          className="ml-2"
+          value={String(pageSize)}
+          onChange={(v) => {
+            setPageSize(Number(v));
+            setPage(0);
+          }}
+          options={[4, 6, 8, 10].map((n) => ({
+            value: String(n),
+            label: String(n),
+          }))}
+        />
       </div>
 
-      <label className="block text-sm text-[var(--muted)] mb-1">Назва</label>
-      <input
-        className="input w-full mb-3"
-        placeholder="Напр. W36 — після правок"
-        value={snapTitle}
-        onChange={(e) => setSnapTitle(e.target.value)}
-        disabled={snapBusy}
-      />
+      {snapOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => !snapBusy && setSnapOpen(false)}
+            />
+            <div
+              className="glasscard relative z-10 w-[min(560px,92vw)] max-h-[85vh] overflow-auto p-5 rounded-2xl"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="snap-title"
+            >
+              <div id="snap-title" className="text-lg font-semibold mb-3">
+                Зберегти до Архіву
+              </div>
 
-      <label className="block text-sm text-[var(--muted)] mb-1">Коментар</label>
-      <textarea
-        className="input w-full min-h-[96px]"
-        placeholder="Коротко опиши, що змінили"
-        value={snapComment}
-        onChange={(e) => setSnapComment(e.target.value)}
-        disabled={snapBusy}
-      />
+              <label className="block text-sm text-[var(--muted)] mb-1">
+                Назва
+              </label>
+              <input
+                className="input w-full mb-3"
+                placeholder="Напр. W36 — після правок"
+                value={snapTitle}
+                onChange={(e) => setSnapTitle(e.target.value)}
+                disabled={snapBusy}
+              />
 
-      <div className="mt-4 flex justify-end gap-2">
-        <button
-          className="btn px-4 py-2 rounded-xl"
-          onClick={() => setSnapOpen(false)}
-          disabled={snapBusy}
-        >
-          Скасувати
-        </button>
-        <button
-          className="btn px-4 py-2 rounded-xl"
-          onClick={handleConfirmSnapshot}
-          disabled={snapBusy || !snapTitle.trim() || !snapComment.trim()}
-          title={
-            !snapTitle.trim() || !snapComment.trim()
-              ? "Заповни назву і коментар"
-              : "Зберегти до Архіву"
-          }
-        >
-          {snapBusy ? "Зберігаємо…" : "Підтвердити"}
-        </button>
-      </div>
-    </div>
-  </div>,
-  document.body
-)}
+              <label className="block text-sm text-[var(--muted)] mb-1">
+                Коментар
+              </label>
+              <textarea
+                className="input w-full min-h-[96px]"
+                placeholder="Коротко опиши, що змінили"
+                value={snapComment}
+                onChange={(e) => setSnapComment(e.target.value)}
+                disabled={snapBusy}
+              />
 
+              <div className="mt-4 flex justify-end gap-2">
+                <button
+                  className="btn px-4 py-2 rounded-xl"
+                  onClick={() => setSnapOpen(false)}
+                  disabled={snapBusy}
+                >
+                  Скасувати
+                </button>
+                <button
+                  className="btn px-4 py-2 rounded-xl"
+                  onClick={handleConfirmSnapshot}
+                  disabled={
+                    snapBusy || !snapTitle.trim() || !snapComment.trim()
+                  }
+                  title={
+                    !snapTitle.trim() || !snapComment.trim()
+                      ? "Заповни назву і коментар"
+                      : "Зберегти до Архіву"
+                  }
+                >
+                  {snapBusy ? "Зберігаємо…" : "Підтвердити"}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
