@@ -6,6 +6,8 @@ import ViewModeToggle from "./ViewModeToggle";
 import Toast from "@/components/Toast";
 import type { ViewMode } from "@/lib/utils/prefs";
 import ExportButtons from "@/components/ExportButtons";
+import Reveal from "./Reveal";
+import Crossfade from "./Crossfade";
 
 type Stats = { students: number; teachers: number; courses: number };
 
@@ -101,43 +103,49 @@ const AdminQuickPanel: React.FC<{
       </div>
 
       {!isMobile && (
-        <div className="mt-4">
-          {value === "view" ? (
-            <ExportButtons
-              onExportAll={() => flash("Експорт усього розкладу")}
-              onExportCourse={() => flash("Експорт обраного курсу")}
-              onExportLevel={() => flash("Експорт бакалаврів / магістрів")}
-            />
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-3">
-              <button
-                className="btn py-3 rounded-2xl hover-shadow"
-                onClick={async () => {
-                  await pushAdminChange({
-                    entity: "schedule",
-                    action: "updated",
-                    title: "Швидке редагування розкладу (solve)",
-                    actor: "Admin",
-                  });
-                  flash("solve is done");
-                }}
-              >
-                Вирішити
-              </button>
-              <button
-                className="btn py-3 rounded-2xl hover-shadow"
-                onClick={() => flash("optimize is done")}
-              >
-                Оптимізувати
-              </button>
-              <button
-                className="btn py-3 rounded-2xl hover-shadow"
-                onClick={() => nav("/admin/logs")}
-              >
-                Логи
-              </button>
-            </div>
+  <div className="mt-4">
+    <Crossfade stateKey={value}>
+      {value === "view" ? (
+        <Reveal y={6} opacityFrom={0}>
+          <ExportButtons
+            onExportAll={() => flash("Експорт усього розкладу")}
+            onExportCourse={() => flash("Експорт обраного курсу")}
+            onExportLevel={() => flash("Експорт бакалаврів / магістрів")}
+          />
+        </Reveal>
+      ) : (
+<Reveal y={6} opacityFrom={0}>
+          <div className="grid gap-3 sm:grid-cols-3">
+                <button
+                  className="btn py-3 rounded-2xl hover-shadow"
+                  onClick={async () => {
+                    await pushAdminChange({
+                      entity: "schedule",
+                      action: "updated",
+                      title: "Швидке редагування розкладу (solve)",
+                      actor: "Admin",
+                    });
+                    flash("solve is done");
+                  }}
+                >
+                  Вирішити
+                </button>
+                <button
+                  className="btn py-3 rounded-2xl hover-shadow"
+                  onClick={() => flash("optimize is done")}
+                >
+                  Оптимізувати
+                </button>
+                <button
+                  className="btn py-3 rounded-2xl hover-shadow"
+                  onClick={() => nav("/admin/logs")}
+                >
+                  Логи
+                </button>
+              </div>
+            </Reveal>
           )}
+           </Crossfade>
         </div>
       )}
 
