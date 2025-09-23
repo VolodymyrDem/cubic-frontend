@@ -4,65 +4,65 @@ import { Link } from "react-router-dom";
 import { useAuth } from "@/types/auth";
 import { fetchStudentGrades } from "@/lib/fakeApi/student";
 import type { SubjectGrades, GradeItem } from "@/types/grades";
-import Reveal from "@/components/Reveal";
-import Crossfade from "@/components/Crossfade";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Search, X, CheckCircle } from "lucide-react";
 import { slugify } from "@/lib/slug";
-import { Search, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 const Row: React.FC<{ item: GradeItem }> = ({ item }) => {
-  const date = new Date(item.createdAt).toLocaleDateString();
+  // Використовуємо сірі кольори для всіх оцінок, як предмети на сторінці з домашніми завданнями
   return (
-    <div className="flex items-start justify-between gap-4 py-2 border-b border-[var(--border)]/60">
-      <div className="hover-lift min-w-0">
-        <div className="font-medium truncate">{item.comment ?? "Оцінка"}</div>
-        <div className="text-sm text-[var(--muted)]">
-          {date}
-          {item.classroomUrl ? (
-            <>
-              {" · "}
-              <a className="underline hover:opacity-80" href={item.classroomUrl} target="_blank" rel="noreferrer">
-                Classroom
-              </a>
-            </>
-          ) : null}
+    <motion.div 
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      className="flex items-center justify-between p-3 border border-border rounded-lg bg-card hover:bg-background/60 transition-colors"
+    >
+      <div className="space-y-1 flex-1">
+        <div className="font-medium text-foreground">{item.comment || "Оцінювання"}</div>
+        <div className="text-sm text-muted-foreground">
+          {new Date(item.createdAt).toLocaleDateString()}
         </div>
       </div>
-      <div className="shrink-0 text-right">
-        <div className="text-lg font-semibold hover-lift">
-          {item.points}
-          {typeof item.max === "number" ? <span className="text-[var(--muted)] text-sm"> / {item.max}</span> : null}
-        </div>
-      </div>
-    </div>
+      <Badge 
+        variant="outline"
+        className="ml-3 font-medium px-2 py-0.5 text-xs rounded-full bg-muted/20 text-muted-foreground border border-muted/30"
+      >
+        {item.points} б.
+      </Badge>
+    </motion.div>
   );
 };
 
 const SubjectCard: React.FC<{ data: SubjectGrades }> = ({ data }) => {
-  const to = `/student/subject/${slugify(data.subject)}`;
   return (
-    <Link
-      to={to}
-      className="block no-underline text-inherit break-inside-avoid mb-4"
-      title={`Відкрити сторінку предмету: ${data.subject}`}
+    <motion.div 
+      whileHover={{ scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="break-inside-avoid"
     >
-      <div className="glasscard hover-lift rounded-2xl p-4 transition">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-lg font-semibold hover-lift">{data.subject}</div>
-          <div className="text-sm text-[var(--muted)]">К-сть: {data.items.length}</div>
+      <Link to={`/student/subjects/${slugify(data.subject)}`}>
+        <div className="glass glass-card overflow-hidden hover:shadow-lg transition-all duration-300 rounded-xl">
+          <div className="p-4">
+            <h3 className="text-lg font-semibold leading-tight mb-3 text-foreground">{data.subject}</h3>
+          </div>
+          <div className="px-4 pb-4 space-y-3">
+            <div className="space-y-2">
+              {data.items.map((item) => (
+                <Row key={`${item.id}-${item.createdAt}`} item={item} />
+              ))}
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-border/30">
+              <span className="text-sm text-muted-foreground">Загальна сума</span>
+              <Badge variant="outline" className="font-medium px-2 py-0.5 text-xs rounded-full bg-muted/20 text-muted-foreground border border-muted/30">
+                {data.total} балів
+              </Badge>
+            </div>
+          </div>
         </div>
-
-        <div className="divide-y divide-[var(--border)]/60">
-          {data.items.map((it) => (
-            <Row key={it.id} item={it} />
-          ))}
-        </div>
-
-        <div className="mt-3 pt-3 border-t border-[var(--border)]/60 flex items-center justify-between">
-          <div className="text-sm text-[var(--muted)]">Сума балів</div>
-          <div className="text-xl font-bold hover-lift">{data.total}</div>
-        </div>
-      </div>
-    </Link>
+      </Link>
+    </motion.div>
   );
 };
 
@@ -99,56 +99,92 @@ const StudentGrades: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="space-y-4">
-      <Reveal className="relative z-10 flex items-center justify-center text-center" delayMs={120} y={10} opacityFrom={0}>
-        <div className="text-2xl font-semibold">Оцінки</div>
-      </Reveal>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 flex items-center justify-center text-center"
+      >
+        <div className="flex items-center gap-3 glass backdrop-blur-sm px-6 py-4 rounded-2xl border border-border/20">
+          <CheckCircle className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-semibold text-foreground">Оцінки</h1>
+        </div>
+      </motion.div>
 
-      <Reveal y={0} blurPx={6} opacityFrom={0} delayMs={80}>
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="text-center sm:text-left text-sm text-[var(--muted)]">
-            Оновлено: {updatedAt ? new Date(updatedAt).toLocaleString() : "—"}
-          </div>
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }} 
+        animate={{ opacity: 1, y: 0 }} 
+        transition={{ delay: 0.2 }}
+      >
+        <div className="glass glass-card p-4 rounded-xl">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-sm text-muted-foreground">
+              Оновлено: {updatedAt ? new Date(updatedAt).toLocaleString() : "—"}
+            </div>
 
-          {/* Пошук */}
-          <div className="w-full sm:w-80 hover-lift">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)]" />
-              <input
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Пошук предмету…"
-                aria-label="Пошук предмету"
-                className="w-full pl-9 pr-9 py-2 rounded-xl glasscard border border-[var(--border)]/60 outline-none focus:ring-2 focus:ring-[var(--primary)]/40 transition"
-              />
-              {q && (
-                <button
-                  onClick={() => setQ("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-[var(--muted)]/10"
-                  aria-label="Очистити пошук"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
+            <div className="w-full sm:w-80">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Пошук предмету…"
+                  className="pl-9 pr-9"
+                />
+                {q && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setQ("")}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 p-0"
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </Reveal>
+      </motion.div>
 
-      <Crossfade stateKey={[...filtered.map((s) => `${slugify(s.subject)}:${s.total}`), q].join("|")}>
-        <Reveal y={8} blurPx={8} opacityFrom={0} delayMs={100}>
-          {filtered.length === 0 ? (
-            <div className="text-center text-[var(--muted)]">Нічого не знайдено за запитом “{q}”.</div>
-          ) : (
-            // Masonry-колонки замість grid, щоб не тягнуло блоки по висоті
-            <div className="columns-1 sm:columns-2 lg:columns-3 gap-4">
-              {filtered.map((s) => (
-                <SubjectCard key={s.subject} data={s} />
-              ))}
+      <AnimatePresence mode="wait">
+        {filtered.length === 0 ? (
+          <motion.div 
+            key="empty"
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }}
+            className="text-center py-8"
+          >
+            <div className="glass glass-card p-8 rounded-xl">
+              <p className="text-muted-foreground">
+                {q ? `Нічого не знайдено за запитом "${q}"` : "Оцінок ще немає"}
+              </p>
             </div>
-          )}
-        </Reveal>
-      </Crossfade>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="columns-1 sm:columns-2 xl:columns-3 gap-6 space-y-0"
+          >
+            {filtered.map((s, index) => (
+              <motion.div
+                key={s.subject}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+                className="break-inside-avoid mb-6"
+              >
+                <SubjectCard data={s} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

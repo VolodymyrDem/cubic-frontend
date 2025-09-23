@@ -25,7 +25,7 @@ const ViewModeToggle: React.FC<Props> = ({ value, onChange }) => {
   const modeLabel = mode === "edit" ? "Edit" : "View";
 
   return (
-    <button onClick={toggle} className="glasscard p-5 w-full text-left pressable hover-lift " aria-label={`Режим: ${modeLabel}`}>
+    <button onClick={toggle} className="glass glass-card p-5 w-full text-left pressable hover-lift rounded-xl" aria-label={`Режим: ${modeLabel}`}>
       <div className="font-semibold text-lg mb-1">Режим</div>
       <div className="text-4xl font-semibold leading-none">{modeLabel}</div>
     </button>

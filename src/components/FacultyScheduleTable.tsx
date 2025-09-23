@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { createPortal } from "react-dom";
 import NiceSelect from "@/ui/NiceSelect";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 /* ----- константи часу та днів (4 пари) ----- */
 const TIMES: Record<1 | 2 | 3 | 4, { start: string; end: string }> = {
@@ -75,26 +76,33 @@ const ParityToggle: React.FC<{
   value: Parity;
   onChange: (p: Parity) => void;
 }> = ({ value, onChange }) => {
-  const Item: React.FC<{ v: Parity; label: string }> = ({ v, label }) => (
+  const items: { v: Parity; label: string; color: string }[] = [
+    { v: "any", label: "будь-який", color: "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700" },
+        { v: "odd", label: "непарний", color: "bg-orange-100 text-orange-700 hover:bg-orange-200 dark:bg-orange-900/30 dark:text-orange-300 dark:hover:bg-orange-800/40" },
+    { v: "even", label: "парний", color: "bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:hover:bg-blue-800/40" },
+  ];
+
+  const Item: React.FC<{ v: Parity; label: string; color: string }> = ({ v, label, color }) => (
     <button
       type="button"
       onClick={() => onChange(v)}
       className={[
-        "px-2 py-1 rounded-2xl text-xs transition hover-lift",
+        "px-3 py-1.5 rounded-xl text-xs font-medium transition hover-lift",
         value === v
-          ? "bg-[var(--surface-2)] ring-1 ring-[var(--border)]"
-          : "hover:bg-[var(--surface-2)]/60",
+          ? `${color} ring-1 ring-current`
+          : `${color} opacity-60 hover:opacity-100`,
       ].join(" ")}
-      title={label}
+      title={`Тиждень: ${label}`}
     >
       {label}
     </button>
   );
+
   return (
     <div className="hover-lift inline-flex items-center gap-1 bg-[var(--surface)] rounded-2xl p-1 ring-1 ring-[var(--border)]">
-      <Item v="any" label="довільний" />
-      <Item v="odd" label="непарнтй" />
-      <Item v="even" label="парний" />
+      {items.map(item => (
+        <Item key={item.v} v={item.v} label={item.label} color={item.color} />
+      ))}
     </div>
   );
 };
@@ -104,28 +112,36 @@ const AddSlotButton: React.FC<{
   label: string;
   onClick: () => void;
   title?: string;
-}> = ({ label, onClick, title }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    title={title}
-    // ✅ гарантовано однакова ширина, але не ширше за колонку
-    style={{ width: "min(280px, 100%)" }}
-    className={[
-      "block mx-auto", // центр
-      "px-4 py-3 rounded-2xl", // форма
-      "border-2 border-dashed border-[var(--border)]/70",
-      "bg-[var(--surface)]/40 hover:bg-[var(--surface-2)]/60",
-      "text-[var(--text)]/90",
-      "flex items-center justify-center gap-2",
-      "transition hover-lift focus:outline-none focus:ring-2 focus:ring-[var(--ring)]",
-      "select-none",
-    ].join(" ")}
-  >
-    <Plus className="h-4 w-4 opacity-80" />
-    <span className="font-medium">{label}</span>
-  </button>
-);
+  variant?: 'odd' | 'even' | 'any';
+}> = ({ label, onClick, title, variant = 'any' }) => {
+  const colors = {
+    odd: 'border-orange-500/40 bg-orange-50/10 hover:bg-orange-100/20 text-orange-700 dark:text-orange-300',
+    even: 'border-blue-500/40 bg-blue-50/10 hover:bg-blue-100/20 text-blue-700 dark:text-blue-300',
+    any: 'border-[var(--border)]/70 bg-[var(--surface)]/40 hover:bg-[var(--surface-2)]/60 text-[var(--text)]/90'
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      // ✅ гарантовано однакова ширина, але не ширше за колонку
+      style={{ width: "min(280px, 100%)" }}
+      className={[
+        "block mx-auto", // центр
+        "px-4 py-3 rounded-2xl", // форма
+        "border-2 border-dashed",
+        colors[variant],
+        "flex items-center justify-center gap-2",
+        "transition hover-lift focus:outline-none focus:ring-2 focus:ring-[var(--ring)]",
+        "select-none text-sm font-medium",
+      ].join(" ")}
+    >
+      <Plus className="h-4 w-4 opacity-80" />
+      <span>{label}</span>
+    </button>
+  );
+};
 
 /* ---------- картка пари (перегляд) ---------- */
 const CellCard: React.FC<{
@@ -262,46 +278,88 @@ const SelectorRow: React.FC<{
   dense,
   setDense,
 }) => (
-  <div className="flex flex-wrap gap-3 mb-4 items-center">
-    <NiceSelect
-      ariaLabel="Рівень навчання"
-      value={level}
-      onChange={(v) => setLevel(v as Level)}
-      options={[
-        { value: "bachelor", label: "Бакалавр" },
-        { value: "master", label: "Магістр" },
-      ]}
-    />
+  <div className="flex flex-wrap gap-4 mb-6 items-center p-4 bg-background/30 backdrop-blur rounded-xl border border-white/10">
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium text-muted-foreground">Рівень освіти:</span>
+      <Select value={level} onValueChange={(v) => setLevel(v as Level)}>
+        <SelectTrigger className="w-[140px] glass glass-btn hover:scale-[1.02] transition-all duration-200">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="glass glass-card border-white/20 shadow-2xl">
+          <SelectItem 
+            value="bachelor" 
+            className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+          >
+            🎓 Бакалавр
+          </SelectItem>
+          <SelectItem 
+            value="master"
+            className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+          >
+            🎖️ Магістр
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
 
-    <NiceSelect
-      ariaLabel="Курс"
-      value={String(course)}
-      onChange={(v) => setCourse(Number(v))}
-      options={(level === "bachelor" ? [1, 2, 3, 4] : [1, 2]).map((c) => ({
-        value: String(c),
-        label: `${c} курс`,
-      }))}
-    />
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium text-muted-foreground">Курс:</span>
+      <Select value={String(course)} onValueChange={(v) => setCourse(Number(v))}>
+        <SelectTrigger className="w-[120px] glass glass-btn hover:scale-[1.02] transition-all duration-200">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="glass glass-card border-white/20 shadow-2xl">
+          {(level === "bachelor" ? [1, 2, 3, 4] : [1, 2]).map((c) => (
+            <SelectItem 
+              key={c} 
+              value={String(c)}
+              className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+            >
+              {c} курс
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
 
-    <NiceSelect
-      ariaLabel="Парність тижня"
-      value={parity}
-      onChange={(v) => setParity(v as Parity)}
-      options={[
-        { value: "any", label: "Будь-який тиждень" },
-        { value: "even", label: "Парний" },
-        { value: "odd", label: "Непарний" },
-      ]}
-    />
+    <div className="flex items-center gap-2">
+      <span className="text-sm font-medium text-muted-foreground">Парність тижня:</span>
+      <Select value={parity} onValueChange={(v) => setParity(v as Parity)}>
+        <SelectTrigger className="w-[180px] glass glass-btn hover:scale-[1.02] transition-all duration-200">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className="glass glass-card border-white/20 shadow-2xl">
+          <SelectItem 
+            value="any"
+            className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+          >
+            📅 Будь-який тиждень
+          </SelectItem>
+          <SelectItem 
+            value="even"
+            className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+          >
+            📈 Парний
+          </SelectItem>
+          <SelectItem 
+            value="odd"
+            className="hover:bg-primary/10 focus:bg-primary/10 transition-colors"
+          >
+            📉 Непарний
+          </SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
 
-    <label className="inline-flex items-center gap-2 ml-auto text-sm cursor-pointer">
+    <label className="inline-flex items-center gap-2 ml-auto text-sm cursor-pointer group">
       <input
         type="checkbox"
-        className="checkbox"
+        className="w-4 h-4 text-primary bg-background/50 border-2 border-white/20 rounded focus:ring-primary focus:ring-2 transition-all duration-200"
         checked={dense}
         onChange={(e) => setDense(e.target.checked)}
       />
-      <Minimize2 className="h-4 w-4" /> Dense
+      <Minimize2 className="h-4 w-4 group-hover:scale-110 transition-transform duration-200" /> 
+      <span className="text-muted-foreground group-hover:text-foreground transition-colors duration-200">Компактний вигляд</span>
     </label>
   </div>
 );
@@ -417,13 +475,23 @@ const FacultyScheduleTable: React.FC<{
   );
 
   const byCell = useMemo(() => {
-    const m = new Map<string, FacultyLesson[]>();
+    const m = new Map<string, { odd?: FacultyLesson; even?: FacultyLesson; any?: FacultyLesson }>();
     viewLessons.forEach((l) => {
       const groupName = (l.group ?? (l as any).speciality ?? "").toString();
       const k = `${l.weekday}-${l.pair}-${groupName}`;
-      const arr = m.get(k) ?? [];
-      arr.push(l);
-      m.set(k, arr);
+      const cell = m.get(k) ?? {};
+      
+      // Забезпечуємо унікальність парності в комірці
+      if (l.parity === "odd" && !cell.odd) {
+        cell.odd = l;
+      } else if (l.parity === "even" && !cell.even) {
+        cell.even = l;
+      } else if (l.parity === "any" && !cell.any) {
+        cell.any = l;
+      }
+      // Ігноруємо дублікати - не додаємо другу пару з тією ж парністю
+      
+      m.set(k, cell);
     });
     return m;
   }, [viewLessons]);
@@ -432,7 +500,16 @@ const FacultyScheduleTable: React.FC<{
     weekday: 1 | 2 | 3 | 4 | 5 | 6,
     pair: 1 | 2 | 3 | 4,
     group: string
-  ) => byCell.get(`${weekday}-${pair}-${group}`) ?? [];
+  ) => {
+    const cell = byCell.get(`${weekday}-${pair}-${group}`);
+    if (!cell) return { oddItems: [], evenItems: [], anyItems: [] };
+    
+    return {
+      oddItems: cell.odd ? [cell.odd] : [],
+      evenItems: cell.even ? [cell.even] : [],
+      anyItems: cell.any ? [cell.any] : []
+    };
+  };
 
   /* ---------- редагування ---------- */
   const startEdit = (l: FacultyLesson) => {
@@ -480,6 +557,23 @@ const FacultyScheduleTable: React.FC<{
     parity: Parity;
   }) => {
     if (!editable) return;
+    
+    // Перевіряємо чи не існує вже пара з такою парністю в цій комірці
+    const existing = allLessons.find((l) =>
+      l.level === level &&
+      l.course === course &&
+      l.weekday === opts.weekday &&
+      l.pair === opts.pair &&
+      (l.group ?? (l as any).speciality) === opts.group &&
+      l.parity === opts.parity
+    );
+    
+    if (existing) {
+      // Якщо пара вже існує - просто редагуємо її
+      startEdit(existing);
+      return;
+    }
+    
     const l: FacultyLesson = {
       id: tmpId(),
       weekday: opts.weekday,
@@ -502,7 +596,8 @@ const FacultyScheduleTable: React.FC<{
   /* ---------- DnD ---------- */
   const moveLesson = (
     lessonId: string,
-    to: { weekday: 1 | 2 | 3 | 4 | 5 | 6; pair: 1 | 2 | 3 | 4; group: string }
+    to: { weekday: 1 | 2 | 3 | 4 | 5 | 6; pair: 1 | 2 | 3 | 4; group: string },
+    forceParity?: Parity
   ) => {
     if (!editable) return;
     setAllLessons((prev) => {
@@ -510,11 +605,15 @@ const FacultyScheduleTable: React.FC<{
       if (srcIdx < 0) return prev;
       if (prev[srcIdx].pinned) return prev;
 
-      const targetIdx = prev.findIndex(
+      const movingLesson = prev[srcIdx];
+      const targetParity = forceParity || movingLesson.parity;
+      
+      // Знаходимо всі пари в цільовій комірці
+      const targetLessons = prev.filter(
         (l) =>
-          l.level === prev[srcIdx].level &&
-          l.course === prev[srcIdx].course &&
-          l.parity === prev[srcIdx].parity &&
+          l.id !== lessonId &&
+          l.level === movingLesson.level &&
+          l.course === movingLesson.course &&
           l.weekday === to.weekday &&
           l.pair === to.pair &&
           (l.group ?? (l as any).speciality) === to.group
@@ -523,52 +622,105 @@ const FacultyScheduleTable: React.FC<{
       const next = [...prev];
       const timeOf = (p: 1 | 2 | 3 | 4) => TIMES[p];
 
-      if (targetIdx >= 0) {
-        if (next[targetIdx].pinned) return prev;
-        const a = next[srcIdx];
-        const b = next[targetIdx];
-        next[targetIdx] = {
-          ...a,
+      // Логіка обробки різних сценаріїв
+      if (targetLessons.length === 0) {
+        // Порожня комірка - просто переміщуємо
+        next[srcIdx] = {
+          ...movingLesson,
           weekday: to.weekday,
           pair: to.pair,
           group: to.group,
           time: timeOf(to.pair),
+          parity: targetParity,
         };
-        next[srcIdx] = {
-          ...b,
-          weekday: a.weekday,
-          pair: a.pair,
-          group: (a.group ?? (a as any).speciality ?? "") as string,
-          time: timeOf(a.pair),
-        };
+      } else if (targetLessons.length === 1) {
+        const targetLesson = targetLessons[0];
+        const targetIdx = prev.findIndex(l => l.id === targetLesson.id);
+        
+        if (targetLesson.pinned) return prev; // Не можемо змінити закріплену пару
+
+        if (targetLesson.parity === "any") {
+          // Якщо в цілі є "any" пара
+          if (targetParity === "any") {
+            // any -> any: простий swap
+            next[targetIdx] = {
+              ...targetLesson,
+              weekday: movingLesson.weekday,
+              pair: movingLesson.pair,
+              group: (movingLesson.group ?? (movingLesson as any).speciality ?? "") as string,
+              time: timeOf(movingLesson.pair),
+            };
+            next[srcIdx] = {
+              ...movingLesson,
+              weekday: to.weekday,
+              pair: to.pair,
+              group: to.group,
+              time: timeOf(to.pair),
+            };
+          } else {
+            // odd/even -> any: змінюємо any на протилежну парність
+            const oppositeParity: Parity = targetParity === "odd" ? "even" : "odd";
+            next[targetIdx] = {
+              ...targetLesson,
+              parity: oppositeParity,
+            };
+            next[srcIdx] = {
+              ...movingLesson,
+              weekday: to.weekday,
+              pair: to.pair,
+              group: to.group,
+              time: timeOf(to.pair),
+              parity: targetParity,
+            };
+          }
+        } else if (movingLesson.parity === "any") {
+          // any -> odd/even: змінюємо any на протилежну парність цілі
+          const oppositeParity: Parity = targetLesson.parity === "odd" ? "even" : "odd";
+          next[srcIdx] = {
+            ...movingLesson,
+            weekday: to.weekday,
+            pair: to.pair,
+            group: to.group,
+            time: timeOf(to.pair),
+            parity: oppositeParity,
+          };
+        } else if (targetLesson.parity === targetParity) {
+          // Однакова парність - swap
+          next[targetIdx] = {
+            ...targetLesson,
+            weekday: movingLesson.weekday,
+            pair: movingLesson.pair,
+            group: (movingLesson.group ?? (movingLesson as any).speciality ?? "") as string,
+            time: timeOf(movingLesson.pair),
+          };
+          next[srcIdx] = {
+            ...movingLesson,
+            weekday: to.weekday,
+            pair: to.pair,
+            group: to.group,
+            time: timeOf(to.pair),
+          };
+        } else {
+          // Різна парність (odd vs even) - просто переміщуємо
+          next[srcIdx] = {
+            ...movingLesson,
+            weekday: to.weekday,
+            pair: to.pair,
+            group: to.group,
+            time: timeOf(to.pair),
+            parity: targetParity,
+          };
+        }
       } else {
-        next[srcIdx] = {
-          ...next[srcIdx],
-          weekday: to.weekday,
-          pair: to.pair,
-          group: to.group,
-          time: timeOf(to.pair),
-        };
+        // В комірці 2 пари (odd + even) - заборонено, нічого не робимо
+        return prev;
       }
+      
       return next;
     });
   };
 
-  const onDropToCell = (
-    e: React.DragEvent,
-    coords: {
-      weekday: 1 | 2 | 3 | 4 | 5 | 6;
-      pair: 1 | 2 | 3 | 4;
-      group: string;
-    }
-  ) => {
-    if (!editable) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const id = e.dataTransfer.getData("text/plain");
-    if (id) moveLesson(id, coords);
-    setDragging(null);
-  };
+
 
   // drop на пусту зону з конкретизацією парності
   const dropIntoEmpty = (
@@ -584,15 +736,7 @@ const FacultyScheduleTable: React.FC<{
     e.preventDefault();
     const id = e.dataTransfer.getData("text/plain");
     if (!id) return;
-    moveLesson(id, coords);
-    // після переміщення — виставляємо парність
-    setAllLessons((prev) =>
-      prev.map((l) =>
-        l.id === id
-          ? { ...l, parity: forceParity, time: TIMES[coords.pair] }
-          : l
-      )
-    );
+    moveLesson(id, coords, forceParity);
     setDragging(null);
   };
 
@@ -687,14 +831,25 @@ const FacultyScheduleTable: React.FC<{
       }
     });
 
-    // у стан зберігаємо тільки odd/even
+    // у стан зберігаємо тільки odd/even, очищуємо старі записи
     const next: Record<string, { odd: number; even: number }> = {};
     Object.entries(tmp).forEach(([k, v]) => (next[k] = { odd: v.odd, even: v.even }));
+    
+    // Додаємо базові висоти для рядків без пар (щоб не було 0 висоти)
+    WEEKDAYS.forEach(weekday => {
+      PAIRS.forEach(pair => {
+        const rowKey = `${weekday}-${pair}`;
+        if (!next[rowKey]) {
+          next[rowKey] = { odd: baseHalfMin, even: baseHalfMin };
+        }
+      });
+    });
+    
     setRowHeights(next);
   });
 
   return () => cancelAnimationFrame(raf);
-}, [viewLessons, groups, dense, editingId, baseHalfMin]);
+}, [viewLessons, groups, dense, editingId, baseHalfMin, allLessons.length]); // Додаємо allLessons.length як dependency
 
   /* ---------- інлайн-редактор (вставляється замість картки) ---------- */
   const renderInlineEditor = () => (
@@ -878,21 +1033,13 @@ const FacultyScheduleTable: React.FC<{
                       </td>
 
                       {groups.map((group) => {
-                        const items = getCell(
+                        const cellData = getCell(
                           weekday as 1 | 2 | 3 | 4 | 5 | 6,
                           pair as 1 | 2 | 3 | 4,
                           group
                         );
-                        const oddItems = items.filter(
-                          (i) => i.parity === "odd"
-                        );
-                        const evenItems = items.filter(
-                          (i) => i.parity === "even"
-                        );
-                        const anyItems = items.filter(
-                          (i) => i.parity === "any"
-                        );
-                        const isEmpty = items.length === 0;
+                        const { oddItems, evenItems, anyItems } = cellData;
+                        const isEmpty = oddItems.length === 0 && evenItems.length === 0 && anyItems.length === 0;
 
                         const dropToHalf = (
                           e: React.DragEvent,
@@ -903,42 +1050,10 @@ const FacultyScheduleTable: React.FC<{
                           const id = e.dataTransfer.getData("text/plain");
                           if (!id) return;
 
-                          const hasAny = anyItems[0];
-                          if (hasAny) {
-                            const draggedParity: Parity =
-                              half === "top" ? "odd" : "even";
-                            const anyTo: Parity =
-                              half === "top" ? "even" : "odd";
-                            setAllLessons((prev) =>
-                              prev.map((l) => {
-                                if (l.id === id)
-                                  return {
-                                    ...l,
-                                    weekday,
-                                    pair,
-                                    group,
-                                    time: TIMES[pair],
-                                    parity: draggedParity,
-                                  };
-                                if (l.id === hasAny.id)
-                                  return { ...l, parity: anyTo };
-                                return l;
-                              })
-                            );
-                            setDragging(null);
-                            return;
-                          }
-
-                          // звичайний dnd у половину
-                          const draggedParity: Parity =
-                            half === "top" ? "odd" : "even";
-                          moveLesson(id, { weekday, pair, group });
-                          // якщо була any — конкретизуємо
-                          setAllLessons((prev) =>
-                            prev.map((l) =>
-                              l.id === id ? { ...l, parity: draggedParity } : l
-                            )
-                          );
+                          const draggedParity: Parity = half === "top" ? "odd" : "even";
+                          
+                          // Використовуємо нову логіку moveLesson з примусовою парністю
+                          moveLesson(id, { weekday, pair, group }, draggedParity);
                           setDragging(null);
                         };
 
@@ -973,8 +1088,9 @@ const FacultyScheduleTable: React.FC<{
                                   }
                                 >
                                   <AddSlotButton
-                                    label="Додати непарну пару"
-                                    title="Додати пару (odd)"
+                                    label="Непарний тиждень"
+                                    title="Додати пару тільки для непарного тижня"
+                                    variant="odd"
                                     onClick={() =>
                                       createDraftLesson({
                                         weekday,
@@ -997,8 +1113,9 @@ const FacultyScheduleTable: React.FC<{
                                   }
                                 >
                                   <AddSlotButton
-                                    label="Додати пару"
-                                    title="Додати пару (будь-який тиждень)"
+                                    label="Будь-який тиждень"
+                                    title="Додати пару для будь-якого тижня (парного або непарного)"
+                                    variant="any"
                                     onClick={() =>
                                       createDraftLesson({
                                         weekday,
@@ -1021,8 +1138,9 @@ const FacultyScheduleTable: React.FC<{
                                   }
                                 >
                                   <AddSlotButton
-                                    label="Додати парну пару"
-                                    title="Додати пару (even)"
+                                    label="Парний тиждень"
+                                    title="Додати пару тільки для парного тижня"
+                                    variant="even"
                                     onClick={() =>
                                       createDraftLesson({
                                         weekday,
@@ -1067,11 +1185,44 @@ const FacultyScheduleTable: React.FC<{
                                       style={{ minHeight: minAny }}
                                       onDragOver={allowDrop}
                                       onDrop={(e) => {
-                                        onDropToCell(e, {
-                                          weekday,
-                                          pair,
-                                          group,
-                                        });
+                                        // Drop на any пару - спеціальна логіка
+                                        if (!editable) return;
+                                        e.preventDefault();
+                                        const draggedId = e.dataTransfer.getData("text/plain");
+                                        if (!draggedId) return;
+                                        
+                                        const draggedLesson = allLessons.find(l => l.id === draggedId);
+                                        if (!draggedLesson || draggedLesson.pinned) return;
+                                        
+                                        const anyLesson = anyItems[0];
+                                        if (!anyLesson || anyLesson.pinned) return;
+                                        
+                                        if (draggedLesson.parity === "any") {
+                                          // any -> any: простий swap
+                                          moveLesson(draggedId, { weekday, pair, group });
+                                        } else {
+                                          // odd/even -> any: змінюємо any на протилежну парність
+                                          const targetParity = draggedLesson.parity === "odd" ? "even" : "odd";
+                                          setAllLessons((prev) =>
+                                            prev.map((l) => {
+                                              if (l.id === draggedId) {
+                                                return {
+                                                  ...l,
+                                                  weekday,
+                                                  pair,
+                                                  group,
+                                                  time: TIMES[pair],
+                                                  parity: draggedLesson.parity,
+                                                };
+                                              }
+                                              if (l.id === anyLesson.id) {
+                                                return { ...l, parity: targetParity };
+                                              }
+                                              return l;
+                                            })
+                                          );
+                                        }
+                                        setDragging(null);
                                       }}
                                     >
                                       {anyItems.map((l) =>
@@ -1164,8 +1315,9 @@ const FacultyScheduleTable: React.FC<{
                                         ) : editable ? (
                                           <div className="p-1">
                                             <AddSlotButton
-                                              label="Додати непарну пару"
-                                              title="Додати пару (odd)"
+                                              label="Непарний тиждень"
+                                              title="Додати пару для непарного тижня"
+                                              variant="odd"
                                               onClick={() =>
                                                 createDraftLesson({
                                                   weekday,
@@ -1221,8 +1373,9 @@ const FacultyScheduleTable: React.FC<{
                                         ) : editable ? (
                                           <div className="p-1">
                                             <AddSlotButton
-                                              label="Додати парну пару"
-                                              title="Додати пару (even)"
+                                              label="Парний тиждень"
+                                              title="Додати пару для парного тижня"
+                                              variant="even"
                                               onClick={() =>
                                                 createDraftLesson({
                                                   weekday,

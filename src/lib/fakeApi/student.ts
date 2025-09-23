@@ -518,6 +518,7 @@ export async function fetchStudentSubject(
       id: t.id,
       text: t.text,
       dueDate: t.dueDate,
+      done: t.done,  // додаємо поле done
       classroomUrl: t.classroomUrl,
     }));
 

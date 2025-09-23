@@ -17,6 +17,7 @@ export type SubjectDetails = {
     id: string;
     text: string;
     dueDate: string;
+    done: boolean;  // додаємо поле для статусу виконання
     classroomUrl?: string;
   }>;
   recentGrades: Array<{

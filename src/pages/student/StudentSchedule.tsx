@@ -3,11 +3,12 @@ import React, { useEffect, useState } from "react";
 import { fetchStudentSchedule } from "@/lib/fakeApi/student";
 import type { StudentSchedule as T } from "@/types/schedule";
 import { useAuth } from "@/types/auth";
-import ScheduleWeek from "@/components/ScheduleWeek";
 import { formatWeekRange, getFirstTeachingMonday, getParity, getWeekIndex, getWeekStartFromIndex } from "@/lib/time/academicWeek";
-import Reveal from "@/components/Reveal";
-import Crossfade from "@/components/Crossfade";
+import { Calendar } from "lucide-react";
 import WeekPickerCard from "@/components/WeekPickerCard";
+import WeekCalendar from "@/components/WeekCalendar";
+import LessonCard from "@/components/LessonCard";
+import { motion, AnimatePresence } from "framer-motion";
 
 const StudentSchedule: React.FC = () => {
   const { user } = useAuth();
@@ -48,47 +49,65 @@ const weekStart = React.useMemo(
   const totalWeeks: number = (data as any).totalWeeks ?? 16;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* 1) Заголовок */}
-      <Reveal
+      <motion.div
+        initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5 }}
         className="relative z-10 flex items-center justify-center text-center"
-        delayMs={120}
-        y={10}
-        opacityFrom={0}
       >
-        <div className="text-2xl font-semibold">
-          Мій розклад — {data.group.name}{data.group.subgroup ? `/${data.group.subgroup}` : ""}
+        <div className="flex items-center gap-3 glass backdrop-blur-sm px-6 py-4 rounded-2xl border border-border/20">
+          <Calendar className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-semibold text-foreground">
+            Мій розклад — {data.group.name}{data.group.subgroup ? `/${data.group.subgroup}` : ""}
+          </h1>
         </div>
-      </Reveal>
-
+      </motion.div>
 
       {/* 2) Панель з вибором тижня */}
-      <Reveal y={0} blurPx={6} opacityFrom={0} delayMs={80}>
+      <motion.div 
+        initial={{ opacity: 0, y: 0, filter: "blur(6px)" }} 
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }} 
+        transition={{ delay: 0.08 }}
+      >
         <WeekPickerCard
           week={week}
           totalWeeks={totalWeeks}
           rangeText={rangeText}
           onChange={setWeek}
           currentWeek={Math.min(currentWeek, totalWeeks)}
-
           titleCenter={
-            <div className="text-center text-sm text-[var(--muted)]">
+            <div className="text-center text-sm text-muted-foreground">
               {parity === "odd" ? "Непарний тиждень" : "Парний тиждень"}
             </div>
           }
         />
-      </Reveal>
-
+      </motion.div>
 
       {/* 3) Сітка з днями — вся разом (і при перемиканні тижня теж разом) */}
-      {/* тут crossfade */}
-<Crossfade stateKey={week}>
-        <Reveal y={0} blurPx={8} opacityFrom={0} delayMs={120}>
-          {/* ✅ передаємо parity та weekStart */}
-          <ScheduleWeek lessons={data.lessons} parity={parity} weekStart={weekStart} />
-        </Reveal>
-      </Crossfade>
-
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={week}
+          initial={{ opacity: 0, y: 0, filter: "blur(8px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: 0, filter: "blur(8px)" }}
+          transition={{ duration: 0.3 }}
+        >
+          <WeekCalendar 
+            lessons={data.lessons} 
+            parity={parity} 
+            weekStart={weekStart} 
+            renderLesson={(lesson, isToday) => (
+              <LessonCard 
+                lesson={lesson} 
+                isToday={isToday} 
+                userRole="student"
+              />
+            )}
+          />
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

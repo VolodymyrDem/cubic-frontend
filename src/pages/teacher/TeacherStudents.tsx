@@ -3,9 +3,12 @@ import React, { useEffect, useMemo, useState, useCallback } from "react";
 import { fetchMyStudents } from "@/lib/fakeApi/teacher";
 import type { Student } from "@/types/students";
 import { useAuth } from "@/types/auth";
-import Reveal from "@/components/Reveal";
-import { cls } from "@/lib/utils/cls";
-import { ChevronDown } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ChevronDown, Users, FileText, Download, ExternalLink } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 /* ---------------------------------- types --------------------------------- */
 type GroupKey = { groupId: string; subgroup?: string | null };
@@ -81,107 +84,118 @@ const GroupPanel = React.memo(function GroupPanel({
     [bucket.students]
   );
 
-  // локальний лічильник відкриттів саме цієї групи
-  const [openVersion, setOpenVersion] = React.useState(0);
-  const wasOpen = React.useRef(isOpen);
-  React.useEffect(() => {
-    if (!wasOpen.current && isOpen) setOpenVersion(v => v + 1);
-    wasOpen.current = isOpen;
-  }, [isOpen]);
-
   return (
-    <Reveal delayMs={revealDelay} y={8} opacityFrom={0.02} blurPx={6}>
-      <div className={cls(
-        "glasscard rounded-2xl overflow-hidden border transition-shadow hover-lift",
-        isOpen ? "shadow-lg" : "shadow"
-      )}>
+    <motion.div
+      initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      transition={{ duration: 0.4, delay: revealDelay * 0.001 }}
+    >
+      <Card className={`overflow-hidden hover:shadow-lg hover:scale-[1.02] transition-all duration-300 glass glass-card backdrop-blur-sm border border-border/20 ${!isOpen ? 'glass-collapsed' : ''}`}>
         {/* Хедер групи */}
-        <div className="w-full flex items-center justify-between gap-4 p-4">
-          <button
-            type="button"
-            className="flex-1 flex items-center gap-3 text-left"
-            aria-expanded={isOpen}
-            onClick={() => onToggle(bucket.label)}
-            title="Показати/сховати список"
-          >
-            <div className="size-8 rounded-full flex items-center justify-center text-sm font-semibold bg-[var(--primary)]/15 border border-[var(--border)]">
-              {studentsSorted.length}
-            </div>
-            <div>
-              <div className="font-medium">{bucket.label}</div>
-              <div className="text-sm text-[var(--muted)]">
-                Група{bucket.key.subgroup ? "/Підгрупа" : ""}
-              </div>
-            </div>
-          </button>
-
-          {/* Кнопки експорту — компактні, в стилі .btn */}
-          <div className="flex items-center gap-2">
-            <button
-              className="btn px-3 py-1.5 rounded-xl text-sm hover-shadow"
-              onClick={(e) => { e.stopPropagation(); onExportTxt({ ...bucket, students: studentsSorted }); }}
-              title="Експортувати TXT (нумерований список)"
-            >
-              TXT
-            </button>
-            <button
-              className="btn px-3 py-1.5 rounded-xl text-sm hover-shadow"
-              onClick={(e) => { e.stopPropagation(); onExportCsv({ ...bucket, students: studentsSorted }); }}
-              title="Експортувати CSV (Google Sheets)"
-            >
-              CSV
-            </button>
-            <button
-              className="btn px-3 py-1.5 rounded-xl text-sm hover-shadow"
-              onClick={(e) => { e.stopPropagation(); onExportSheets({ ...bucket, students: studentsSorted }); }}
-              title="Відкрити Google Sheets і вставити список"
-            >
-              Sheets
-            </button>
-            <button
-              type="button"
-              className="btn px-2 py-1.5 rounded-xl"
+        <CardHeader className={`backdrop-blur-sm border-b border-border/10 ${isOpen ? 'bg-card/60' : 'bg-card/40'}`}>
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              className="flex-1 flex items-center gap-3 text-left h-auto p-0 justify-start hover:bg-accent/30 rounded-lg px-2 py-1 transition-colors"
               onClick={() => onToggle(bucket.label)}
-              aria-label={isOpen ? "Згорнути" : "Розгорнути"}
-              title={isOpen ? "Згорнути" : "Розгорнути"}
+              aria-expanded={isOpen}
             >
-              <ChevronDown className={cls("h-5 w-5 transition-transform duration-300", isOpen && "rotate-180")} />
-            </button>
+              <Badge variant="outline" className="chip-primary-border bg-primary/10 text-primary border-primary/50">
+                {studentsSorted.length}
+              </Badge>
+              <div>
+                <CardTitle className="font-medium text-left text-foreground">{bucket.label}</CardTitle>
+                <div className="text-sm text-muted-foreground">
+                  Група{bucket.key.subgroup ? "/Підгрупа" : ""}
+                </div>
+              </div>
+            </Button>
+
+            {/* Кнопки експорту */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onExportTxt({ ...bucket, students: studentsSorted }); }}
+                title="Експортувати TXT (нумерований список)"
+                className="hover:scale-105 transition-transform duration-200 bg-background/50 border-border/60 hover:bg-background/80"
+              >
+                <FileText className="w-4 h-4 mr-1" />
+                TXT
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onExportCsv({ ...bucket, students: studentsSorted }); }}
+                title="Експортувати CSV (Google Sheets)"
+                className="hover:scale-105 transition-transform duration-200 bg-background/50 border-border/60 hover:bg-background/80"
+              >
+                <Download className="w-4 h-4 mr-1" />
+                CSV
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); onExportSheets({ ...bucket, students: studentsSorted }); }}
+                title="Відкрити Google Sheets і вставити список"
+                className="hover:scale-105 transition-transform duration-200 bg-background/50 border-border/60 hover:bg-background/80"
+              >
+                <ExternalLink className="w-4 h-4 mr-1" />
+                Sheets
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggle(bucket.label)}
+                aria-label={isOpen ? "Згорнути" : "Розгорнути"}
+                title={isOpen ? "Згорнути" : "Розгорнути"}
+                className="hover:scale-105 transition-all duration-200 hover:bg-accent/30 text-foreground"
+              >
+                <ChevronDown className={`h-5 w-5 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+              </Button>
+            </div>
           </div>
-        </div>
+        </CardHeader>
 
         {/* Розкривна частина */}
-        <div
-          className={cls(
-            "grid transition-[grid-template-rows] duration-400 ease-out",
-            isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          )}
-          aria-hidden={!isOpen}
-        >
-          <div className="overflow-hidden">
-            <div key={openVersion} className="px-4 pb-4 mt-2">
-              <div className="space-y-2">
+        <AnimatePresence>
+          {isOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              style={{ overflow: "hidden" }}
+            >
+              <CardContent className="p-4 space-y-2 bg-card/30 backdrop-blur-sm">
                 {studentsSorted.map((s, j) => (
-                  <Reveal key={s.id} delayMs={40 + j * 20} y={6} opacityFrom={0}>
-                    <div className="card hover-lift p-3 flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-7 h-7 flex items-center justify-center rounded-full bg-[var(--primary)]/20 text-sm font-medium shrink-0">
-                          {j + 1}
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium truncate">{s.name}</div>
-                          <div className="text-sm text-[var(--muted)] truncate">{s.email}</div>
-                        </div>
-                      </div>
+                  <motion.div
+                    key={s.id}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: j * 0.05, duration: 0.3 }}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-accent/30 transition-colors duration-200 border border-border/10 bg-background/50"
+                  >
+                    <Avatar className="w-8 h-8">
+                      <AvatarFallback className="bg-primary/15 text-primary font-medium text-sm border border-primary/20">
+                        {s.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate text-foreground">{s.name}</div>
+                      <div className="text-sm text-muted-foreground truncate">{s.email}</div>
                     </div>
-                  </Reveal>
+                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/30">
+                      {j + 1}
+                    </Badge>
+                  </motion.div>
                 ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </Reveal>
+              </CardContent>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </Card>
+    </motion.div>
   );
 });
 
@@ -246,7 +260,7 @@ const TeacherStudents: React.FC = () => {
     downloadCsv(rows, name);
   }, []);
 
-  /** Легкий варіант “відкрити Sheets”: копіюємо TSV у буфер і відкриваємо нову таблицю */
+  /** Легкий варіант "відкрити Sheets": копіюємо TSV у буфер і відкриваємо нову таблицю */
   const exportSheets = useCallback(async (bucket: GroupBucket) => {
     const sorted = bucket.students.slice().sort((a, b) => a.name.localeCompare(b.name, "uk"));
     const rows: string[][] = [
@@ -269,14 +283,33 @@ const TeacherStudents: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-4">
-      <Reveal className="relative z-10 flex items-center justify-center text-center" delayMs={100} y={10} opacityFrom={0}>
-        <div className="text-2xl font-semibold">Студенти</div>
-      </Reveal>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 flex items-center justify-center text-center"
+      >
+        <div className="flex items-center gap-3 glass backdrop-blur-sm px-6 py-4 rounded-2xl border border-border/20">
+          <Users className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-semibold text-foreground">Студенти</h1>
+        </div>
+      </motion.div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start"
+      >
         {columns.map((col, colIdx) => (
-          <div key={colIdx} className="flex flex-col gap-4">
+          <motion.div
+            key={colIdx}
+            initial={{ opacity: 0, x: colIdx === 0 ? -50 : 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 + colIdx * 0.1 }}
+            className="flex flex-col gap-4"
+          >
             {col.map(({ b, i }) => (
               <GroupPanel
                 key={b.label}
@@ -289,10 +322,11 @@ const TeacherStudents: React.FC = () => {
                 revealDelay={80 + i * 40}
               />
             ))}
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 };
+
 export default TeacherStudents;

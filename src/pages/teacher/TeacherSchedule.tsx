@@ -3,10 +3,13 @@ import React, { useEffect, useState } from "react";
 import { fetchTeacherSchedule } from "@/lib/fakeApi/teacher";
 import { useAuth } from "@/types/auth";
 import { getFirstTeachingMonday, getParity, getWeekIndex, getWeekStartFromIndex, formatWeekRange } from "@/lib/time/academicWeek";
+import { motion } from "framer-motion";
+import { Calendar } from "lucide-react";
 import Reveal from "@/components/Reveal";
 import Crossfade from "@/components/Crossfade";
 import WeekPickerCard from "@/components/WeekPickerCard";
-import ScheduleWeekTeacher from "@/components/ScheduleWeekTeacher";
+import WeekCalendar from "@/components/WeekCalendar";
+import LessonCard from "@/components/LessonCard";
 
 const TeacherSchedule: React.FC = () => {
   const { user } = useAuth();
@@ -37,10 +40,18 @@ const TeacherSchedule: React.FC = () => {
   const totalWeeks: number = (data as any).totalWeeks ?? 16;
 
   return (
-    <div className="space-y-4">
-      <Reveal className="relative z-10 flex items-center justify-center text-center" delayMs={120} y={10} opacityFrom={0}>
-        <div className="text-2xl font-semibold">Мій розклад</div>
-      </Reveal>
+    <div className="space-y-6">
+      <motion.div
+        initial={{ opacity: 0, y: 20, filter: "blur(8px)" }}
+        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+        transition={{ duration: 0.5 }}
+        className="relative z-10 flex items-center justify-center text-center"
+      >
+        <div className="flex items-center gap-3 glass backdrop-blur-sm px-6 py-4 rounded-2xl border border-border/20">
+          <Calendar className="w-8 h-8 text-primary" />
+          <h1 className="text-3xl font-semibold text-foreground">Мій розклад</h1>
+        </div>
+      </motion.div>
 
       <Reveal y={0} blurPx={6} opacityFrom={0} delayMs={80}>
         <WeekPickerCard
@@ -55,7 +66,19 @@ const TeacherSchedule: React.FC = () => {
 
       <Crossfade stateKey={`${week}-${parity}`}>
         <Reveal y={0} blurPx={8} opacityFrom={0} delayMs={120}>
-          <ScheduleWeekTeacher lessons={data.lessons} parity={parity} weekStart={weekStart} />
+          <WeekCalendar
+            lessons={data.lessons}
+            parity={parity}
+            weekStart={weekStart}
+            renderLesson={(lesson, isToday) => (
+              <LessonCard
+                lesson={lesson}
+                isToday={isToday}
+                userRole="teacher"
+                subjectId={lesson.id} // For teachers, we use the lesson ID as the subject ID
+              />
+            )}
+          />
         </Reveal>
       </Crossfade>
     </div>

@@ -13,6 +13,19 @@ import { exportSchedulePdf } from "@/lib/utils/pdf";
 import { useAuth } from "@/types/auth";
 import type { ScheduleSnapshot, FacultyLesson } from "@/types/schedule";
 import { createPortal } from "react-dom";
+import { motion } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Archive, 
+  ArrowLeft, 
+  Calendar, 
+  User, 
+  MessageSquare, 
+  CheckCircle,
+  Clock
+} from "lucide-react";
 
 type Level = "bachelor" | "master";
 
@@ -75,68 +88,154 @@ const AdminArchiveView: React.FC = () => {
   const confirmModal =
     confirmOpen &&
     createPortal(
-      <div className="fixed inset-0 z-[1000] flex items-center justify-center">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[1000] flex items-center justify-center"
+      >
         <div
-          className="absolute inset-0 bg-black/50"
+          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
           onClick={() => !busy && setConfirmOpen(false)}
         />
-        <div className="glasscard relative z-10 w-[min(520px,92vw)] p-5 rounded-2xl">
-          <div className="text-lg font-semibold mb-2">
-            Зробити розклад актуальним?
-          </div>
-          <div className="text-sm text-[var(--muted)] mb-4">
-            Поточний актуальний розклад буде автоматично збережено в Архів.
-          </div>
-          <div className="flex justify-end gap-2">
-            <button
-              className="btn px-4 py-2 rounded-xl"
-              onClick={() => setConfirmOpen(false)}
-              disabled={busy}
-            >
-              Скасувати
-            </button>
-            <button
-              className="btn px-4 py-2 rounded-xl"
-              onClick={makeCurrent}
-              disabled={busy}
-            >
-              {busy ? "Застосовуємо…" : "Підтвердити"}
-            </button>
-          </div>
-        </div>
-      </div>,
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          className="relative z-10 w-[min(520px,92vw)]"
+        >
+          <Card className="backdrop-blur-md bg-background/90 border-white/20 shadow-2xl">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-primary" />
+                <CardTitle>Зробити розклад актуальним?</CardTitle>
+              </div>
+              <CardDescription>
+                Поточний актуальний розклад буде автоматично збережено в Архів.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setConfirmOpen(false)}
+                  disabled={busy}
+                  className="bg-background/50 backdrop-blur hover:bg-background/80"
+                >
+                  Скасувати
+                </Button>
+                <Button
+                  onClick={makeCurrent}
+                  disabled={busy}
+                  className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30"
+                >
+                  {busy ? "Застосовуємо…" : "Підтвердити"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>,
       document.body
     );
 
-  if (!snap) return <div className="glasscard p-6">Завантаження…</div>;
+  if (!snap) return (
+    <div className="flex items-center justify-center min-h-screen">
+      <Card className="backdrop-blur-md bg-background/30 border-white/10 shadow-2xl">
+        <CardContent className="p-6">
+          <div className="flex items-center gap-2">
+            <Clock className="w-5 h-5 animate-spin" />
+            Завантаження...
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Link to="/admin/archive" className="btn px-3 py-2 rounded-xl">
-          ← До списку архіву
-        </Link>
-        <div className="text-2xl font-semibold">Архів — перегляд знімка</div>
-      </div>
+    <div className="space-y-6">
+      {/* Header with glass panel */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex justify-center"
+      >
+        <Card className="backdrop-blur-md bg-background/30 border-white/10 shadow-2xl w-full max-w-4xl">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Archive className="w-6 h-6 text-primary" />
+                <div>
+                  <CardTitle className="text-2xl">Перегляд архівного розкладу</CardTitle>
+                  <CardDescription>Детальний перегляд збереженого знімка розкладу</CardDescription>
+                </div>
+              </div>
+              <Button
+                asChild
+                variant="outline"
+                className="bg-background/50 backdrop-blur hover:bg-background/80"
+              >
+                <Link to="/admin/archive">
+                  <ArrowLeft className="w-4 h-4 mr-2" />
+                  До архіву
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+        </Card>
+      </motion.div>
 
-      {/* Інфо-панель про знімок */}
-      <div className="glasscard p-4">
-        <div className="font-semibold text-lg">{snap.title}</div>
-        <div className="text-sm text-[var(--muted)]">
-          Збережено: {new Date(snap.createdAt).toLocaleString()} · Автор:{" "}
-          {snap.createdBy} · Парність: {snap.parity === "both" ? "Вся сітка" : snap.parity}
-        </div>
-        {snap.comment && <div className="mt-2">{snap.comment}</div>}
-
-        <div className="mt-4">
-          <button
-            className="btn px-4 py-2 rounded-xl"
-            onClick={() => setConfirmOpen(true)}
-          >
-            Зробити цей розклад актуальним
-          </button>
-        </div>
-      </div>
+      {/* Snapshot info panel */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.1 }}
+        className="flex justify-center"
+      >
+        <Card className="backdrop-blur-md bg-background/30 border-white/10 shadow-2xl w-full max-w-4xl">
+          <CardHeader>
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              <CardTitle className="text-xl">{snap.title}</CardTitle>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Clock className="w-4 h-4" />
+                <span>Збережено: {new Date(snap.createdAt).toLocaleString()}</span>
+              </div>
+              {snap.createdBy && (
+                <div className="flex items-center gap-1">
+                  <User className="w-4 h-4" />
+                  <span>Автор: {snap.createdBy}</span>
+                </div>
+              )}
+              <Badge variant="outline" className="border-primary/30 text-primary">
+                {snap.parity === "both" ? "Вся сітка" : snap.parity}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-0">
+            {snap.comment && (
+              <div className="mb-4 p-3 bg-muted/20 rounded-lg border border-white/10">
+                <div className="flex items-start gap-2">
+                  <MessageSquare className="w-4 h-4 mt-0.5 text-muted-foreground" />
+                  <p className="text-sm">{snap.comment}</p>
+                </div>
+              </div>
+            )}
+            
+            <Button
+              onClick={() => setConfirmOpen(true)}
+              className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30"
+              size="lg"
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              Зробити цей розклад актуальним
+            </Button>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Кнопки експорту — між панеллю і самою таблицею */}
       <ExportButtons

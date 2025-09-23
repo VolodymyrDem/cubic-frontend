@@ -4,16 +4,16 @@ import { useHideOnScroll } from "@/lib/hooks/useHideOnScroll";
 import { useAuth } from "@/types/auth";
 import { cls } from "@/lib/utils/cls";
 import favicon from "@/assets/favicon.ico";
-import { Sun, Moon } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { ThemeToggleButton } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 import { useTheme } from "@/theme/ThemeProvider";
 
 const Header: React.FC = () => {
   const hidden = useHideOnScroll();
   const { user, logout } = useAuth();
+  useTheme();
   const nav = useNavigate();
-
-  // Тема з контексту (зберігається в localStorage у ThemeProvider)
-  const { theme, toggle } = useTheme();
 
   return (
     <header
@@ -22,66 +22,54 @@ const Header: React.FC = () => {
         hidden ? "-translate-y-full" : "translate-y-0"
       )}
     >
-      <div className={cls("mt-4 glasscard hover-lift px-6 py-5 flex items-center justify-between relative")}>
+      <div className="mt-4 glass glass-card px-6 py-4 flex items-center justify-between relative transition-all duration-300 animate-in fade-in slide-in-from-top-4 rounded-xl">
         {/* Logo (left) */}
         <Link to="/" className="flex items-center gap-3 font-semibold text-xl">
-          <img src={favicon} alt="Logo" className=" hover-lift h-8 w-8" />
-          <span className="hover-lift">Cubic Helper</span>
+          <img src={favicon} alt="Logo" className="h-8 w-8 transition-transform duration-300 hover:scale-110 animate-in spin-in-3" />
+          <span className="transition-colors duration-300 hover:text-primary text-foreground">
+            Cubic Helper
+          </span>
         </Link>
 
         {/* Nav (center) */}
-        <nav className="hidden font-semibold md:flex gap-6 font-semiboldtext-lg absolute left-1/2 -translate-x-1/2">
-
+        <nav className="hidden font-semibold md:flex gap-6 absolute left-1/2 -translate-x-1/2 text-foreground">
           {user?.role === "student" && (
             <>
-              <NavLink className="hover-lift" to="/student/schedule">Мій розклад</NavLink>
-              <NavLink className="hover-lift" to="/student/homework">Домашні завдання</NavLink>
-               <NavLink className="hover-lift" to="/student/grades">Оцінки</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/student/schedule">Мій розклад</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/student/homework">Домашні завдання</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/student/grades">Оцінки</NavLink>
             </>
           )}
           {user?.role === "teacher" && (
             <>
-              <NavLink className="hover-lift" to="/teacher/schedule">Мій розклад</NavLink>
-              <NavLink className="hover-lift" to="/teacher/students">Студенти</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/teacher/schedule">Мій розклад</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/teacher/students">Студенти</NavLink>
             </>
           )}
-          {/* {user?.role === "admin" && (
-            <>
-              <NavLink to="/admin/teachers">Викладачі</NavLink>
-              <NavLink to="/admin/schedule">Розклад</NavLink>
-            </>
-          )} */}
         </nav>
 
         {/* Right side */}
-        <div className="flex items-center gap-3 text-lg">
+        <div className="flex items-center gap-3">
           {user ? (
-            <button
-              className="btn font-semiboldtext-lg px-4 py-2 hover-lift"
+            <Button
+              variant="outline"
+              className="gap-2 hover:scale-105 transition-transform text-foreground hover:bg-background/80 hover:text-foreground border-border/30 glass glass-card backdrop-blur-sm"
               onClick={() => {
                 logout();
                 nav("/");
               }}
             >
-              Вийти
-            </button>
+              <LogOut className="h-4 w-4" />
+              <span className="text-foreground">Вийти</span>
+            </Button>
           ) : (
-            <Link to="/login" className="btn text-lg px-4 py-2 hover-lift">
-              Увійти
-            </Link>
+            <Button asChild className="hover:scale-105 transition-transform hover:bg-primary/90 glass glass-card backdrop-blur-sm border border-primary/20">
+              <Link to="/login" className="text-primary-foreground">Увійти</Link>
+            </Button>
           )}
 
-          {/* Кнопка перемикання теми (збереження виконує ThemeProvider) */}
-<button
-  onClick={() => {
-    toggle();             // перемикає тему (і зберігає у localStorage)
-    window.location.reload(); // перезавантажує сторінку
-  }}
-  className="btn p-2 hover-lift"
-  aria-label="Перемкнути тему"
->
-            {theme === "light" ? <Moon className="h-7 w-7" /> : <Sun className="h-7 w-7" />}
-          </button>
+          {/* Theme toggle button */}
+          <ThemeToggleButton />
         </div>
       </div>
     </header>
