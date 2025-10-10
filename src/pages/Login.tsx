@@ -5,9 +5,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ROLE_HOME, isPathAllowedForRole } from "@/components/roleHome";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import GoogleSignInButton from "@/components/GoogleSignInButton";
 
 const Login: React.FC = () => {
-  const { loginAs, loginWithGoogle, user } = useAuth();
+  const { loginAs, user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const sp = new URLSearchParams(loc.search);
@@ -28,10 +29,8 @@ const Login: React.FC = () => {
         <CardTitle>Вхід</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* PROD-кейс — базова кнопка (працюватиме і в DEV) */}
-        <Button className="w-full" onClick={loginWithGoogle} variant="default">
-          Увійти через Google
-        </Button>
+        {/* PROD-кейс — Google OAuth кнопка */}
+        <GoogleSignInButton useDirectFlow={true} />
 
         {/* DEV-кнопки показуємо лише якщо є loginAs */}
         {loginAs ? (

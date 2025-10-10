@@ -33,6 +33,7 @@ const Header: React.FC = () => {
 
         {/* Nav (center) */}
         <nav className="hidden font-semibold md:flex gap-6 absolute left-1/2 -translate-x-1/2 text-foreground">
+          <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/classroom-demo">Classroom Demo</NavLink>
           {user?.role === "student" && (
             <>
               <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/student/schedule">Мій розклад</NavLink>

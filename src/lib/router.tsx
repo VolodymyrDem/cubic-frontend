@@ -5,6 +5,7 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
 import RequireAnon from "@/components/RequireAnon";
 import AuthProcessing from "@/pages/AuthProcessing";
+import AuthCallback from "@/pages/AuthCallback";
 import CompleteProfile from "@/pages/CompleteProfile";
 
 import StudentDashboard from "@/pages/student/StudentDashboard";
@@ -29,6 +30,7 @@ import Layout from "@/components/Layout";
 import AdminStudents from "@/pages/admin/AdminStudents";
 import StudentSubject from "@/pages/student/StudentSubject"; // ✅ нове
 import TeacherSubject from "@/pages/teacher/TeacherSubject";
+import ClassroomDemo from "@/pages/ClassroomDemo";
 
 export const router = createBrowserRouter(
   [
@@ -40,7 +42,9 @@ export const router = createBrowserRouter(
         { path: "login", element: <RequireAnon><Login /></RequireAnon> },
         { path: "register", element: <RequireAnon><Register /></RequireAnon> },
         { path: "auth/processing", element: <AuthProcessing /> },
+        { path: "auth/callback", element: <AuthCallback /> },
         { path: "complete-profile", element: <CompleteProfile /> },
+        { path: "classroom-demo", element: <ClassroomDemo /> },
 
         {
           path: "student",
