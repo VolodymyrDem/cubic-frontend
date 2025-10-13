@@ -8,6 +8,7 @@ import React, {
   useState,
 } from "react";
 import { api } from "@/lib/api";
+import { startGoogleOAuth } from "@/lib/googleAuth";
 
 export type Role = "student" | "teacher" | "admin";
 export type UserStatus = "active" | "pending_profile" | "pending_approval" | "disabled";
@@ -106,33 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("[DEV_AUTH] loginWithGoogle() викликано — ігноруємо редірект.");
       return;
     }
-    
-    // Google OAuth flow - redirect to Google Authorization Server
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/auth/callback`;
-    
-    const scopes = [
-      'openid',
-      'profile',
-      'email',
-      'https://www.googleapis.com/auth/classroom.rosters.readonly',
-      'https://www.googleapis.com/auth/classroom.coursework.students',
-      'https://www.googleapis.com/auth/classroom.coursework.me',
-      'https://www.googleapis.com/auth/classroom.courses.readonly'
-    ].join(' ');
-
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: scopes,
-      access_type: 'offline',
-      include_granted_scopes: 'true',
-      state: Math.random().toString(36).substring(2, 15),
-    });
-
-    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-    window.location.href = authUrl;
+    // Використовуємо централізований GIS Code Flow з PKCE
+    void startGoogleOAuth();
   };
 
   // ----------- PROD: Logout -----------

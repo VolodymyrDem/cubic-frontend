@@ -25,6 +25,21 @@ declare global {
           renderButton: (element: HTMLElement, config: any) => void;
           disableAutoSelect: () => void;
         };
+        oauth2: {
+          initCodeClient: (config: {
+            client_id: string;
+            scope: string;
+            ux_mode?: "popup" | "redirect";
+            state?: string;
+            redirect_uri?: string;
+            // If ux_mode is popup, we can get code via callback
+            callback?: (response: { code?: string; error?: string }) => void;
+            enable_serial_consent?: boolean;
+            include_granted_scopes?: boolean;
+          }) => {
+            requestCode: () => void;
+          };
+        };
       };
     };
   }
@@ -111,9 +126,9 @@ const sendTokenToBackend = async (credential: string) => {
       const data = await response.json();
       console.log('Backend response:', data);
       
-      // Тут можна оновити стан аутентифікації в додатку
-      // Наприклад, викликати refreshMe() з auth контексту
-      window.location.href = '/'; // Перенаправляємо на головну сторінку
+      // Після успіху бекенд має встановити httpOnly cookie сесії.
+      // Перенаправляємо на обробник, який підтягне профіль і маршрутизує.
+      window.location.href = '/auth/processing';
     } else {
       console.error('Backend authentication failed:', response.status);
     }
@@ -159,30 +174,64 @@ export const disableAutoSelect = () => {
 };
 
 // Ініціюємо OAuth flow вручну (для прямого редиректу)
-export const startGoogleOAuth = () => {
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-  const redirectUri = import.meta.env.VITE_GOOGLE_REDIRECT_URI || `${window.location.origin}/auth/callback`;
-  
-  const scopes = [
-    'openid',
-    'profile',
-    'email',
-    'https://www.googleapis.com/auth/classroom.rosters.readonly',
-    'https://www.googleapis.com/auth/classroom.coursework.students',
-    'https://www.googleapis.com/auth/classroom.coursework.me',
-    'https://www.googleapis.com/auth/classroom.courses.readonly'
-  ].join(' ');
+export const startGoogleOAuth = async () => {
+  // Use GIS OAuth 2.0 Code flow with PKCE handled by Google client
+  await loadGoogleAPI();
 
-  const params = new URLSearchParams({
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  const redirectUri = (import.meta.env.VITE_GOOGLE_REDIRECT_URI as string | undefined)
+    || `${window.location.origin}/auth/callback`;
+
+  if (!clientId) throw new Error("VITE_GOOGLE_CLIENT_ID is not set");
+
+  const scopes = [
+    "openid",
+    "profile",
+    "email",
+    "https://www.googleapis.com/auth/classroom.rosters.readonly",
+    "https://www.googleapis.com/auth/classroom.coursework.students",
+    "https://www.googleapis.com/auth/classroom.coursework.me",
+    "https://www.googleapis.com/auth/classroom.courses.readonly",
+  ].join(" ");
+
+  // Extract optional next path from current URL and persist it
+  try {
+    const u = new URL(window.location.href);
+    const next = u.searchParams.get("next");
+    if (next) sessionStorage.setItem("oauth_next", next);
+  } catch {}
+
+  // CSRF: generate and persist state for later verification in callback
+  const state = Math.random().toString(36).slice(2);
+  try {
+    sessionStorage.setItem("oauth_state", state);
+  } catch {}
+
+  if (!window.google?.accounts?.oauth2) {
+    // Fallback: classic redirect URL (no PKCE). Not recommended, but kept as backup.
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: "code",
+      scope: scopes,
+      access_type: "offline",
+      include_granted_scopes: "true",
+      state,
+      prompt: "consent", // ensure refresh_token on first grant
+    });
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    return;
+  }
+
+  const codeClient = window.google.accounts.oauth2.initCodeClient({
     client_id: clientId,
-    redirect_uri: redirectUri,
-    response_type: 'code',
     scope: scopes,
-    access_type: 'offline',
-    include_granted_scopes: 'true',
-    state: Math.random().toString(36).substring(2, 15), // Генеруємо випадковий state
+    ux_mode: "redirect",
+    redirect_uri: redirectUri,
+    state,
+    include_granted_scopes: true,
+    enable_serial_consent: true,
   });
 
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  window.location.href = authUrl;
+  codeClient.requestCode();
 };

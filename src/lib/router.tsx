@@ -30,7 +30,6 @@ import Layout from "@/components/Layout";
 import AdminStudents from "@/pages/admin/AdminStudents";
 import StudentSubject from "@/pages/student/StudentSubject"; // ✅ нове
 import TeacherSubject from "@/pages/teacher/TeacherSubject";
-import ClassroomDemo from "@/pages/ClassroomDemo";
 
 export const router = createBrowserRouter(
   [
@@ -44,7 +43,6 @@ export const router = createBrowserRouter(
         { path: "auth/processing", element: <AuthProcessing /> },
         { path: "auth/callback", element: <AuthCallback /> },
         { path: "complete-profile", element: <CompleteProfile /> },
-        { path: "classroom-demo", element: <ClassroomDemo /> },
 
         {
           path: "student",

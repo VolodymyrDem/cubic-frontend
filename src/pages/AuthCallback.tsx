@@ -28,6 +28,18 @@ const AuthCallback: React.FC = () => {
           throw new Error('No authorization code received');
         }
 
+        // CSRF: verify state matches what we stored before redirect
+        try {
+          const expectedState = sessionStorage.getItem('oauth_state');
+          if (!state || !expectedState || state !== expectedState) {
+            throw new Error('Invalid OAuth state, please retry login');
+          }
+          // one-time use
+          sessionStorage.removeItem('oauth_state');
+        } catch (e) {
+          throw e instanceof Error ? e : new Error('State verification failed');
+        }
+
         // Відправляємо код авторизації на бекенд
         const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/google/callback`, {
           method: 'POST',
@@ -55,10 +67,10 @@ const AuthCallback: React.FC = () => {
         
         setStatus('success');
         
-        // Перенаправляємо користувача через 2 секунди
+        // Перенаправляємо користувача через 1.5 секунди
         setTimeout(() => {
-          navigate('/', { replace: true });
-        }, 2000);
+          navigate('/auth/processing', { replace: true });
+        }, 1500);
 
       } catch (err) {
         console.error('Authentication error:', err);
