@@ -34,7 +34,8 @@ type AuthCtx = {
 
 // ---- DEV SWITCH ----
 // .env: VITE_DEV_AUTH=1 для заглушок; VITE_DEV_AUTH=0 для прод
-const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "1") === "1";
+// За замовчуванням ВИМКНЕНО в проді ("0"), щоб після логіну брати користувача з бекенду
+const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "0") === "1";
 
 // ключ для localStorage
 const STORAGE_KEY = "cubic.auth.user";
@@ -66,16 +67,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [initializing, setInitializing] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  // ----------- PROD: /auth/me -----------
+  // ----------- PROD: /api/auth/me -----------
   const refreshMe = useCallback(async () => {
+    // Check if token exists before making API call
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setUser(null);
+      saveStoredUser(null);
+      return;
+    }
+
     try {
-      const data = await api.get<{ user: User }>("/auth/me");
-      const nextUser = data?.user ?? null;
-      setUser(nextUser);
-      saveStoredUser(nextUser); // синхронізуємо й локально
+      // Backend returns plain user object with fields like user_id, first_name, last_name, email, role
+  const me = await api.get<any>("/api/auth/me");
+      const mapped: User | null = me
+        ? {
+            id: me.user_id ?? me.id ?? "",
+            name: (me.first_name && me.last_name)
+              ? `${me.first_name} ${me.last_name}`
+              : (me.name ?? me.email ?? ""),
+            email: me.email ?? "",
+            role: me.role ?? null,
+            status: (me.is_active === false) ? "disabled" : "active",
+          }
+        : null;
+      setUser(mapped);
+      try {
+        console.log('[AUTH][refreshMe] Loaded user:', {
+          id: mapped?.id,
+          name: mapped?.name,
+          email: mapped?.email,
+          role: mapped?.role,
+          status: mapped?.status,
+        });
+      } catch {}
+      saveStoredUser(mapped); // синхронізуємо й локально
     } catch {
       setUser(null);
       saveStoredUser(null);
+      // Clear invalid token
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('user');
     }
   }, []);
 
@@ -95,9 +127,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     })();
   }, [refreshMe]);
 
+  // Listen for storage changes (when token is saved in another tab or after OAuth callback)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'access_token' && e.newValue) {
+        // Token was added - refresh user data
+        void refreshMe();
+      } else if (e.key === 'access_token' && !e.newValue) {
+        // Token was removed - logout
+        setUser(null);
+        saveStoredUser(null);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [refreshMe]);
+
   // будь-яка зміна user — зберігаємо локально (дублюємо на випадок ручних змін)
   useEffect(() => {
     saveStoredUser(user);
+    if (user) {
+      try {
+        console.log('[AUTH] User set:', { id: user.id, name: user.name, email: user.email, role: user.role });
+      } catch {}
+    } else {
+      try { console.log('[AUTH] User cleared'); } catch {}
+    }
   }, [user]);
 
   // ----------- PROD: Google redirect -----------
@@ -115,9 +171,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      if (!DEV_AUTH) {
-        await api.post("/auth/logout");
-      }
+      // Clear local auth state and tokens
+      try {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
+      } catch {}
+
       setUser(null);
       saveStoredUser(null);
     } finally {

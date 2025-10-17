@@ -1,12 +1,16 @@
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import RegisterStudent from "@/pages/RegisterStudent";
+import RegisterTeacher from "@/pages/RegisterTeacher";
+import OAuthCallback from "@/pages/OAuthCallback";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
 import RequireAnon from "@/components/RequireAnon";
 import AuthProcessing from "@/pages/AuthProcessing";
 import AuthCallback from "@/pages/AuthCallback";
 import CompleteProfile from "@/pages/CompleteProfile";
+import RoleSelectionPage from "@/pages/RoleSelectionPage";
 
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentSchedule from "@/pages/student/StudentSchedule";
@@ -40,9 +44,15 @@ export const router = createBrowserRouter(
         { index: true, element: <Home /> },
         { path: "login", element: <RequireAnon><Login /></RequireAnon> },
         { path: "register", element: <RequireAnon><Register /></RequireAnon> },
+        { path: "register/student", element: <RequireAnon><RegisterStudent /></RequireAnon> },
+        { path: "register/teacher", element: <RequireAnon><RegisterTeacher /></RequireAnon> },
+        { path: "auth/callback/register/student", element: <OAuthCallback /> },
+        { path: "auth/callback/register/teacher", element: <OAuthCallback /> },
+        { path: "auth/callback/login", element: <OAuthCallback /> },
         { path: "auth/processing", element: <AuthProcessing /> },
         { path: "auth/callback", element: <AuthCallback /> },
         { path: "complete-profile", element: <CompleteProfile /> },
+        { path: "role-selection", element: <RoleSelectionPage /> },
 
         {
           path: "student",
@@ -102,6 +112,5 @@ export const router = createBrowserRouter(
         { path: "*", element: <Navigate to="/" replace /> },
       ],
     },
-  ],
-  { basename: import.meta.env.BASE_URL }
+  ]
 );

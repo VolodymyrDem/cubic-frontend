@@ -12,11 +12,15 @@ async function request<T>(
 ): Promise<T> {
   const { method = "GET", body, headers } = opts;
 
+  // Get JWT token from localStorage
+  const token = localStorage.getItem('access_token');
+  
   const res = await fetch(API_BASE + path, {
     method,
     credentials: "include",
     headers: {
       ...(body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body ? JSON.stringify(body) : undefined,

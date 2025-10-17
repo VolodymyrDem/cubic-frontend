@@ -1,5 +1,4 @@
 // src/lib/googleAuth.ts
-import { config } from "@/config/runtime";
 
 export interface GoogleUser {
   id: string;
@@ -81,17 +80,16 @@ export const initializeGoogleAuth = async (): Promise<void> => {
 };
 
 // Обробляємо відповідь від Google OAuth
-const handleCredentialResponse = (response: GoogleAuthResponse) => {
+const handleCredentialResponse = async (response: GoogleAuthResponse) => {
   // Цей колбек буде викликаний після успішної аутентифікації
-  // Тут ми можемо відправити токен на бекенд для обробки
-  console.log('Google OAuth response:', response);
+  console.log('Google OAuth response received');
   
   // Декодуємо JWT токен для отримання інформації про користувача
   const userInfo = parseJWT(response.credential);
   console.log('User info:', userInfo);
   
   // Відправляємо токен на бекенд
-  sendTokenToBackend(response.credential);
+  await sendTokenToBackend(response.credential);
 };
 
 // Парсимо JWT токен
@@ -113,27 +111,35 @@ const parseJWT = (token: string): GoogleUser | null => {
 // Відправляємо токен на бекенд
 const sendTokenToBackend = async (credential: string) => {
   try {
-    const response = await fetch(`${config.API_BASE_URL}/auth/google/callback`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify({ credential }),
-    });
-
-    if (response.ok) {
-      const data = await response.json();
-      console.log('Backend response:', data);
+    // Import authenticateWithGoogle from auth.ts
+    const { authenticateWithGoogle } = await import('./auth');
+    
+    // First, try to authenticate without role (for existing users)
+    try {
+      const authResponse = await authenticateWithGoogle(credential);
       
-      // Після успіху бекенд має встановити httpOnly cookie сесії.
-      // Перенаправляємо на обробник, який підтягне профіль і маршрутизує.
-      window.location.href = '/auth/processing';
-    } else {
-      console.error('Backend authentication failed:', response.status);
+      if (authResponse.needs_role_selection) {
+        // New user - redirect to role selection
+        sessionStorage.setItem('pending_google_token', credential);
+        window.location.href = '/role-selection';
+      } else {
+        // Existing user - redirect to dashboard
+        console.log('Authentication successful:', authResponse.user);
+        window.location.href = '/dashboard';
+      }
+    } catch (error: any) {
+      // If error is about missing role, redirect to role selection
+      if (error.message?.includes('Role is required')) {
+        sessionStorage.setItem('pending_google_token', credential);
+        window.location.href = '/role-selection';
+      } else {
+        console.error('Authentication error:', error);
+        alert('Помилка аутентифікації: ' + error.message);
+      }
     }
   } catch (error) {
     console.error('Error sending token to backend:', error);
+    alert('Помилка відправки токену на сервер');
   }
 };
 
@@ -175,7 +181,35 @@ export const disableAutoSelect = () => {
 
 // Ініціюємо OAuth flow вручну (для прямого редиректу)
 export const startGoogleOAuth = async () => {
-  // Use GIS OAuth 2.0 Code flow with PKCE handled by Google client
+  /**
+   * Simple approach: Use Google Identity Services with ID token
+   * This is more suitable for SPA without backend client secret
+   */
+  
+  // Trigger the Google Sign-In flow
+  await loadGoogleAPI();
+  
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+  if (!clientId) throw new Error("VITE_GOOGLE_CLIENT_ID is not set");
+  
+  // Initialize with callback
+  window.google!.accounts.id.initialize({
+    client_id: clientId,
+    callback: handleCredentialResponse,
+    auto_select: false,
+    cancel_on_tap_outside: true,
+  });
+  
+  // Show the One Tap dialog (simpler, no FedCM issues)
+  try {
+    window.google!.accounts.id.prompt();
+  } catch (error) {
+    console.error("Google One Tap failed:", error);
+    // Fallback: user will need to click the button
+  }
+  
+  /* 
+  // Alternative: Authorization Code Flow (requires GOOGLE_CLIENT_SECRET on backend)
   await loadGoogleAPI();
 
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
@@ -184,7 +218,7 @@ export const startGoogleOAuth = async () => {
 
   if (!clientId) throw new Error("VITE_GOOGLE_CLIENT_ID is not set");
 
-  const scopes = [
+  const scopes = (import.meta.env.VITE_GOOGLE_SCOPES as string | undefined) || [
     "openid",
     "profile",
     "email",
@@ -194,21 +228,10 @@ export const startGoogleOAuth = async () => {
     "https://www.googleapis.com/auth/classroom.courses.readonly",
   ].join(" ");
 
-  // Extract optional next path from current URL and persist it
-  try {
-    const u = new URL(window.location.href);
-    const next = u.searchParams.get("next");
-    if (next) sessionStorage.setItem("oauth_next", next);
-  } catch {}
-
-  // CSRF: generate and persist state for later verification in callback
   const state = Math.random().toString(36).slice(2);
-  try {
-    sessionStorage.setItem("oauth_state", state);
-  } catch {}
+  sessionStorage.setItem("oauth_state", state);
 
   if (!window.google?.accounts?.oauth2) {
-    // Fallback: classic redirect URL (no PKCE). Not recommended, but kept as backup.
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -217,7 +240,7 @@ export const startGoogleOAuth = async () => {
       access_type: "offline",
       include_granted_scopes: "true",
       state,
-      prompt: "consent", // ensure refresh_token on first grant
+      prompt: "consent",
     });
     window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
     return;
@@ -234,4 +257,5 @@ export const startGoogleOAuth = async () => {
   });
 
   codeClient.requestCode();
+  */
 };
