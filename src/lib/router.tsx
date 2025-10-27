@@ -45,7 +45,8 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <Home /> },
         { path: "login", element: <RequireAnon><Login /></RequireAnon> },
-        { path: "Admin", element: <RequireAnon><AdminLogin /></RequireAnon> },
+        { path: "admin-login", element: <AdminLogin /> },
+        { path: "Admin", element: <AdminLogin /> },
         { path: "register", element: <RequireAnon><Register /></RequireAnon> },
         { path: "register/student", element: <RequireAnon><RegisterStudent /></RequireAnon> },
         { path: "register/teacher", element: <RequireAnon><RegisterTeacher /></RequireAnon> },

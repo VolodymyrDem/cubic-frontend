@@ -1,5 +1,5 @@
 // src/pages/AdminLogin.tsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,16 +7,34 @@ import { Input } from "@/components/ui/input";
 import { InlineSpinner } from "@/components/Spinner";
 import { toast } from "sonner";
 import { adminLogin } from "@/lib/auth";
+import { useAuth } from "@/types/auth";
 
 const AdminLogin: React.FC = () => {
   const nav = useNavigate();
   const loc = useLocation();
   const sp = new URLSearchParams(loc.search);
   const next = sp.get("next") || "/admin/dashboard";
+  const { user, initializing } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect if already logged in as admin
+  useEffect(() => {
+    if (user?.role === "admin") {
+      nav("/admin/dashboard", { replace: true });
+    }
+  }, [user, nav]);
+
+  // Show loading state while initializing
+  if (initializing) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <InlineSpinner />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,7 +50,7 @@ const AdminLogin: React.FC = () => {
       // Refresh the page to update auth context
       window.location.reload();
     } catch (error: any) {
-      toast.error(error.message || 'Помилка входу');
+      toast.error('Неправильний логін або пароль');
     } finally {
       setIsLoading(false);
     }
@@ -95,13 +113,6 @@ const AdminLogin: React.FC = () => {
                 'Увійти'
               )}
             </Button>
-
-            {/* Back to regular login */}
-            <div className="text-center text-sm text-muted-foreground">
-              <a href="/login" className="text-primary hover:underline font-medium">
-                Повернутись до звичайного входу
-              </a>
-            </div>
           </form>
         </CardContent>
       </Card>

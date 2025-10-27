@@ -99,13 +99,6 @@ const Login: React.FC = () => {
             Зареєструватись
           </a>
         </div>
-
-        {/* Admin Login Link */}
-        <div className="text-center text-sm text-muted-foreground mt-2">
-          <a href="/Admin" className="text-muted-foreground/60 hover:text-muted-foreground text-xs">
-            Вхід для адміністратора
-          </a>
-        </div>
       </CardContent>
     </Card>
   );
