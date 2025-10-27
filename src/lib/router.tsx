@@ -1,5 +1,6 @@
 import Home from "@/pages/Home";
 import Login from "@/pages/Login";
+import AdminLogin from "@/pages/AdminLogin";
 import Register from "@/pages/Register";
 import RegisterStudent from "@/pages/RegisterStudent";
 import RegisterTeacher from "@/pages/RegisterTeacher";
@@ -28,6 +29,7 @@ import AdminLogs from "@/pages/admin/AdminLogs";
 import AdminArchive from "@/pages/admin/AdminArchive";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminArchiveView from "@/pages/admin/AdminArchiveView";
+import AdminRegistrationRequests from "@/pages/admin/AdminRegistrationRequests";
 
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -43,6 +45,7 @@ export const router = createBrowserRouter(
       children: [
         { index: true, element: <Home /> },
         { path: "login", element: <RequireAnon><Login /></RequireAnon> },
+        { path: "Admin", element: <RequireAnon><AdminLogin /></RequireAnon> },
         { path: "register", element: <RequireAnon><Register /></RequireAnon> },
         { path: "register/student", element: <RequireAnon><RegisterStudent /></RequireAnon> },
         { path: "register/teacher", element: <RequireAnon><RegisterTeacher /></RequireAnon> },
@@ -105,6 +108,7 @@ export const router = createBrowserRouter(
             { path: "archive", element: <AdminArchive /> },
             { path: "courses", element: <AdminCourses /> },
             { path: "students", element: <AdminStudents /> },
+            { path: "registration-requests", element: <AdminRegistrationRequests /> },
             { path: "archive/:id", element: <AdminArchiveView /> },
           ]
         },

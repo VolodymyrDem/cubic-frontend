@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { InlineSpinner } from "@/components/Spinner";
 
 const Login: React.FC = () => {
-  const { loginAs, user } = useAuth();
+  const { user } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const sp = new URLSearchParams(loc.search);
@@ -100,47 +100,12 @@ const Login: React.FC = () => {
           </a>
         </div>
 
-        {/* DEV кнопки показуємо лише якщо є loginAs */}
-        {loginAs && (
-          <>
-            <div className="text-muted-foreground mt-4 pt-4 border-t text-center text-xs">DEV-швидкий вхід:</div>
-            <div className="space-y-2">
-              <Button
-                className="w-full"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  loginAs("student");
-                  nav(isPathAllowedForRole(next, "student") ? next : ROLE_HOME["student"], { replace: true });
-                }}
-              >
-                DEV: Студент
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  loginAs("teacher");
-                  nav(isPathAllowedForRole(next, "teacher") ? next : ROLE_HOME["teacher"], { replace: true });
-                }}
-              >
-                DEV: Викладач
-              </Button>
-              <Button
-                className="w-full"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  loginAs("admin");
-                  nav(isPathAllowedForRole(next, "admin") ? next : ROLE_HOME["admin"], { replace: true });
-                }}
-              >
-                DEV: Адмін
-              </Button>
-            </div>
-          </>
-        )}
+        {/* Admin Login Link */}
+        <div className="text-center text-sm text-muted-foreground mt-2">
+          <a href="/Admin" className="text-muted-foreground/60 hover:text-muted-foreground text-xs">
+            Вхід для адміністратора
+          </a>
+        </div>
       </CardContent>
     </Card>
   );

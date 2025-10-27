@@ -125,6 +125,38 @@ export async function getCurrentUser(): Promise<User> {
 }
 
 /**
+ * Admin login with email and password
+ */
+export async function adminLogin(
+  email: string,
+  password: string
+): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Authentication failed');
+  }
+
+  const data: AuthResponse = await response.json();
+  
+  // Save token to localStorage
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  
+  return data;
+}
+
+/**
  * Logout user
  */
 export function logout(): void {

@@ -46,6 +46,14 @@ const Header: React.FC = () => {
               <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/teacher/students">Студенти</NavLink>
             </>
           )}
+          {user?.role === "admin" && (
+            <>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/admin/dashboard">Панель</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/admin/registration-requests">Запити</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/admin/teachers">Викладачі</NavLink>
+              <NavLink className="transition-colors duration-300 hover:text-primary hover:scale-105 transition-transform text-foreground" to="/admin/students">Студенти</NavLink>
+            </>
+          )}
         </nav>
 
         {/* Right side */}
