@@ -12,8 +12,37 @@ const RegisterStudent: React.FC = () => {
   const handleRegister = async () => {
     setIsRedirecting(true);
     try {
+      const useCodeFlow = (import.meta.env.VITE_GOOGLE_USE_CODE_FLOW ?? '0') === '1';
       sessionStorage.setItem('oauth_role', 'student');
-      await startGoogleOAuth();
+      if (useCodeFlow) {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        if (!clientId) throw new Error('VITE_GOOGLE_CLIENT_ID is not set');
+        const redirectUri = `${window.location.origin}/auth/callback/register/student`;
+        const scopes = [
+          'openid',
+          'profile',
+          'email',
+          'https://www.googleapis.com/auth/classroom.rosters.readonly',
+          'https://www.googleapis.com/auth/classroom.coursework.students',
+          'https://www.googleapis.com/auth/classroom.coursework.me',
+          'https://www.googleapis.com/auth/classroom.courses.readonly',
+        ].join(' ');
+        const state = Math.random().toString(36).substring(2, 15);
+        sessionStorage.setItem('oauth_state', state);
+        const params = new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          response_type: 'code',
+          scope: scopes,
+          access_type: 'offline',
+          include_granted_scopes: 'true',
+          state,
+          prompt: 'consent',
+        });
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      } else {
+        await startGoogleOAuth();
+      }
     } catch (e) {
       console.error(e);
       setIsRedirecting(false);
