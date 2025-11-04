@@ -175,3 +175,25 @@ export function getAuthHeader(): HeadersInit {
   const token = localStorage.getItem('access_token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
+
+/**
+ * Admin login with username/password
+ */
+export async function adminLogin(username: string, password: string): Promise<AuthResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/auth/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password }),
+  });
+
+  if (!response.ok) {
+    let detail = 'Admin login failed';
+    try { const err = await response.json(); detail = err.detail || detail; } catch {}
+    throw new Error(detail);
+  }
+
+  const data: AuthResponse = await response.json();
+  localStorage.setItem('access_token', data.access_token);
+  localStorage.setItem('user', JSON.stringify(data.user));
+  return data;
+}

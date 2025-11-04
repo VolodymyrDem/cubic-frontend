@@ -28,6 +28,7 @@ import AdminLogs from "@/pages/admin/AdminLogs";
 import AdminArchive from "@/pages/admin/AdminArchive";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminArchiveView from "@/pages/admin/AdminArchiveView";
+import AdminLogin from "@/pages/admin/AdminLogin";
 
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -53,6 +54,9 @@ export const router = createBrowserRouter(
         { path: "auth/callback", element: <AuthCallback /> },
         { path: "complete-profile", element: <CompleteProfile /> },
         { path: "role-selection", element: <RoleSelectionPage /> },
+
+  // Public admin login page
+  { path: "admin/login", element: <RequireAnon><AdminLogin /></RequireAnon> },
 
         {
           path: "student",
