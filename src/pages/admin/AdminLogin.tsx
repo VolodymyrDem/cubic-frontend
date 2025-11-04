@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '@/lib/auth';
+import { useAuth } from '@/types/auth';
 
 export default function AdminLogin() {
   const navigate = useNavigate();
+  const { refreshMe } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,6 +17,8 @@ export default function AdminLogin() {
     setLoading(true);
     try {
       await adminLogin(username.trim(), password);
+      // Синхронізуємо глобальний контекст користувача відразу після логіну
+      await refreshMe();
       navigate('/admin/dashboard', { replace: true });
     } catch (err: any) {
       setError(err?.message || 'Failed to login');
