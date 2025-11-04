@@ -76,7 +76,7 @@ const OAuthCallback: React.FC = () => {
           body: JSON.stringify(requestBody),
         });
 
-        if (!response.ok) {
+  if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           try {
             console.warn('[AUTH][OAuthCallback] HTTP error:', {
@@ -115,6 +115,17 @@ const OAuthCallback: React.FC = () => {
         }
 
         const data = await response.json();
+        // If backend returned a pending registration response, show waiting UI and redirect
+        if (data && data.pending) {
+          setStatus('success');
+          // Clean OAuth state
+          sessionStorage.removeItem('oauth_state');
+          sessionStorage.removeItem('oauth_role');
+          setTimeout(() => {
+            navigate('/pending-approval', { replace: true, state: { message: data.message } });
+          }, 1200);
+          return;
+        }
         // Debug: log basic user info on successful OAuth exchange
         try {
           console.log('[AUTH][OAuthCallback] Success:', {
@@ -129,7 +140,7 @@ const OAuthCallback: React.FC = () => {
           });
         } catch {}
         
-        // Save JWT token and user info
+  // Save JWT token and user info
         localStorage.setItem('access_token', data.access_token);
         localStorage.setItem('user', JSON.stringify(data.user));
 

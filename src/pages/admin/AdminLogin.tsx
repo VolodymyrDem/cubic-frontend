@@ -29,7 +29,7 @@ export default function AdminLogin() {
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+      <div className="w-full max-w-md rounded-lg border border-gray-200 glass glass-card p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <h1 className="mb-1 text-2xl font-semibold">Admin Login</h1>
         <p className="mb-6 text-sm text-gray-500">Sign in with admin credentials</p>
 
