@@ -11,6 +11,7 @@ import AuthProcessing from "@/pages/AuthProcessing";
 import AuthCallback from "@/pages/AuthCallback";
 import CompleteProfile from "@/pages/CompleteProfile";
 import RoleSelectionPage from "@/pages/RoleSelectionPage";
+import PendingApproval from "@/pages/PendingApproval";
 
 import StudentDashboard from "@/pages/student/StudentDashboard";
 import StudentSchedule from "@/pages/student/StudentSchedule";
@@ -28,6 +29,8 @@ import AdminLogs from "@/pages/admin/AdminLogs";
 import AdminArchive from "@/pages/admin/AdminArchive";
 import AdminCourses from "@/pages/admin/AdminCourses";
 import AdminArchiveView from "@/pages/admin/AdminArchiveView";
+import AdminLogin from "@/pages/admin/AdminLogin";
+import AdminRegistrations from "@/pages/admin/AdminRegistrations";
 
 import { createBrowserRouter, Navigate } from "react-router-dom";
 import Layout from "@/components/Layout";
@@ -53,6 +56,10 @@ export const router = createBrowserRouter(
         { path: "auth/callback", element: <AuthCallback /> },
         { path: "complete-profile", element: <CompleteProfile /> },
         { path: "role-selection", element: <RoleSelectionPage /> },
+  { path: "pending-approval", element: <PendingApproval /> },
+
+  // Public admin login page
+  { path: "admin/login", element: <RequireAnon><AdminLogin /></RequireAnon> },
 
         {
           path: "student",
@@ -99,6 +106,7 @@ export const router = createBrowserRouter(
           children: [
             { index: true, element: <Navigate to="dashboard" replace /> },
             { path: "dashboard", element: <AdminDashboard /> },
+            { path: "registrations", element: <AdminRegistrations /> },
             { path: "teachers", element: <AdminTeachers /> },
             { path: "schedule", element: <AdminSchedule /> },
             { path: "logs", element: <AdminLogs /> },

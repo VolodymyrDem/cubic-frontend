@@ -1,6 +1,6 @@
 //src/pages/admin/AdminTeachers.tsx
 import React, { useEffect, useState } from "react";
-import { fetchTeachers } from "@/lib/fakeApi/admin";
+import { fetchAdminTeachersPaged } from "@/lib/api/admin";
 import type { Teacher } from "@/types/teachers";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -11,7 +11,19 @@ import { User, Calendar, Mail, BookOpen } from "lucide-react";
 
 const AdminTeachers: React.FC = () => {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  useEffect(() => { fetchTeachers().then(setTeachers); }, []);
+  useEffect(() => {
+    fetchAdminTeachersPaged(0, 200)
+      .then(({ teachers }) => {
+        const mapped: Teacher[] = teachers.map(t => ({
+          id: t.teacher_id,
+          name: [t.last_name, t.first_name, t.patronymic].filter(Boolean).join(" "),
+          email: t.email ?? "",
+          subjects: [],
+        }));
+        setTeachers(mapped);
+      })
+      .catch(() => setTeachers([]));
+  }, []);
 
   return (
     <div className="space-y-8 p-6">

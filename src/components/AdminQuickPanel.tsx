@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { fetchAdminStats, pushAdminChange } from "@/lib/fakeApi/admin";
-import { Users, BookOpen, Archive } from "lucide-react";
+import { pushAdminChange } from "@/lib/fakeApi/admin";
+import { fetchAdminStats as fetchAdminStatsReal } from "@/lib/api/admin";
+import { Users, BookOpen, Archive, IdCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ViewModeToggle from "./ViewModeToggle";
 import Toast from "@/components/Toast";
@@ -42,7 +43,13 @@ const AdminQuickPanel: React.FC<{
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    fetchAdminStats().then(setStats);
+    fetchAdminStatsReal()
+      .then((s) => setStats({
+        students: s.students_total,
+        teachers: s.teachers_total,
+        courses: s.courses_total,
+      }))
+      .catch(() => setStats(null));
   }, []);
 
   useEffect(() => {
@@ -59,7 +66,7 @@ const AdminQuickPanel: React.FC<{
 
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         {!isMobile && (
           <ViewModeToggle
             value={value}
@@ -99,6 +106,12 @@ const AdminQuickPanel: React.FC<{
           title="Архів"
           subtitle="Знімки, історія, PDF"
           icon={<Archive className="h-8 w-8 text-primary" />}
+        />
+        <StatTile
+          to="/admin/registrations"
+          title="Заявки на реєстрацію"
+          subtitle="Перегляд / керування"
+          icon={<IdCard className="h-8 w-8 text-primary" />}
         />
       </div>
 

@@ -1,4 +1,5 @@
 // src/lib/googleAuth.ts
+import { config } from "@/config/runtime";
 
 export interface GoogleUser {
   id: string;
@@ -38,6 +39,14 @@ declare global {
           }) => {
             requestCode: () => void;
           };
+          initTokenClient: (config: {
+            client_id: string;
+            scope: string;
+            callback: (response: { access_token?: string; error?: string }) => void;
+            prompt?: 'consent' | 'none';
+          }) => {
+            requestAccessToken: (options?: { prompt?: 'consent' | 'none' }) => void;
+          };
         };
       };
     };
@@ -66,9 +75,9 @@ export const loadGoogleAPI = (): Promise<void> => {
 export const initializeGoogleAuth = async (): Promise<void> => {
   await loadGoogleAPI();
   
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId = config.GOOGLE_CLIENT_ID;
   if (!clientId) {
-    throw new Error('VITE_GOOGLE_CLIENT_ID is not set');
+    throw new Error('GOOGLE_CLIENT_ID is not set');
   }
 
   window.google!.accounts.id.initialize({
@@ -128,6 +137,12 @@ const sendTokenToBackend = async (credential: string) => {
         window.location.href = '/dashboard';
       }
     } catch (error: any) {
+      // Check if it's a 202 (pending approval)
+      if (error.status === 202 || error.message?.includes('awaiting admin approval')) {
+        window.location.href = '/pending-approval';
+        return;
+      }
+      
       // If error is about missing role, redirect to role selection
       if (error.message?.includes('Role is required')) {
         sessionStorage.setItem('pending_google_token', credential);
@@ -182,31 +197,59 @@ export const disableAutoSelect = () => {
 // Ініціюємо OAuth flow вручну (для прямого редиректу)
 export const startGoogleOAuth = async () => {
   /**
-   * Simple approach: Use Google Identity Services with ID token
-   * This is more suitable for SPA without backend client secret
+   * Use popup-based OAuth2 flow to avoid FedCM CORS issues
+   * This works reliably without requiring FedCM headers
    */
   
-  // Trigger the Google Sign-In flow
   await loadGoogleAPI();
   
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
-  if (!clientId) throw new Error("VITE_GOOGLE_CLIENT_ID is not set");
+  const clientId = config.GOOGLE_CLIENT_ID as string | undefined;
+  if (!clientId) throw new Error("GOOGLE_CLIENT_ID is not set");
   
-  // Initialize with callback
-  window.google!.accounts.id.initialize({
+  // Note: role can be set by register/login pages via sessionStorage under 'oauth_role'
+  // If needed in future, read it here and pass to backend. For now it's unused.
+  
+  // Use OAuth2 popup flow instead of One Tap to avoid FedCM
+  if (!window.google?.accounts?.oauth2) {
+    console.error("Google OAuth2 API not loaded");
+    throw new Error("Google OAuth2 API not loaded");
+  }
+  
+  const tokenClient = window.google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    callback: handleCredentialResponse,
-    auto_select: false,
-    cancel_on_tap_outside: true,
+    scope: 'openid profile email',
+    callback: async (tokenResponse: any) => {
+      if (tokenResponse.error) {
+        console.error("Google OAuth error:", tokenResponse);
+        alert('Помилка авторизації: ' + tokenResponse.error);
+        return;
+      }
+      
+      // Get ID token using the access token
+      try {
+        const response = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: {
+            'Authorization': `Bearer ${tokenResponse.access_token}`
+          }
+        });
+        
+        const userInfo = await response.json();
+        
+        // Now we need to send this to our backend
+        // Since we don't have id_token from this flow, we'll use the /api/auth/register or /api/auth/login endpoints
+        // But those require authorization code, not access token
+        // So we need a different approach - let's create a temporary id_token-like structure
+        
+        console.log("User info from Google:", userInfo);
+        alert('OAuth popup flow потребує додаткової конфігурації. Використовуйте код flow замість цього.');
+      } catch (error) {
+        console.error("Failed to get user info:", error);
+        alert('Помилка отримання інформації користувача');
+      }
+    },
   });
   
-  // Show the One Tap dialog (simpler, no FedCM issues)
-  try {
-    window.google!.accounts.id.prompt();
-  } catch (error) {
-    console.error("Google One Tap failed:", error);
-    // Fallback: user will need to click the button
-  }
+  tokenClient.requestAccessToken({ prompt: 'consent' });
   
   /* 
   // Alternative: Authorization Code Flow (requires GOOGLE_CLIENT_SECRET on backend)

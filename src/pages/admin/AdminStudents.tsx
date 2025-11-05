@@ -1,6 +1,7 @@
 // src/pages/admin/AdminStudents.tsx
 import React, { useEffect, useMemo, useState } from "react";
-import { fetchAdminStudents, fetchAdminGroups } from "@/lib/fakeApi/admin";
+import { fetchAdminGroups } from "@/lib/fakeApi/admin";
+import { fetchAdminStudentsPaged } from "@/lib/api/admin";
 import type { Student, Group } from "@/types/students";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,7 +14,21 @@ const AdminStudents: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
   const [q, setQ] = useState("");
 
-  useEffect(() => { fetchAdminStudents().then(setStudents); }, []);
+  useEffect(() => {
+    fetchAdminStudentsPaged(0, 200)
+      .then(({ students }) => {
+        // map backend -> UI type
+        const mapped = students.map(s => ({
+          id: s.student_id,
+          name: [s.last_name, s.first_name, s.patronymic].filter(Boolean).join(" "),
+          email: s.email ?? "",
+          groupId: "", // backend doesn't expose groups yet
+          subgroup: null,
+        }));
+        setStudents(mapped);
+      })
+      .catch(() => setStudents([]));
+  }, []);
   useEffect(() => { fetchAdminGroups().then(setGroups); }, []);
 
   const groupNameById = useMemo(() => {

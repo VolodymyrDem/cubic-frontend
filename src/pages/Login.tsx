@@ -6,6 +6,7 @@ import { ROLE_HOME, isPathAllowedForRole } from "@/components/roleHome";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { InlineSpinner } from "@/components/Spinner";
+import { startGoogleOAuth } from "@/lib/googleAuth";
 
 const Login: React.FC = () => {
   const { loginAs, user } = useAuth();
@@ -24,39 +25,45 @@ const Login: React.FC = () => {
     }
   }, [user, next, nav]);
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsRedirecting(true);
-    
-    // Build OAuth URL with all necessary scopes for Classroom
-    const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    const redirectUri = `${window.location.origin}/auth/callback/login`;
-    
-    const scopes = [
-      'openid',
-      'profile',
-      'email',
-      'https://www.googleapis.com/auth/classroom.rosters.readonly',
-      'https://www.googleapis.com/auth/classroom.coursework.students',
-      'https://www.googleapis.com/auth/classroom.coursework.me',
-      'https://www.googleapis.com/auth/classroom.courses.readonly',
-    ].join(' ');
-    
-    // Generate and save state for CSRF protection
-    const state = Math.random().toString(36).substring(2, 15);
-    sessionStorage.setItem('oauth_state', state);
-    
-    const params = new URLSearchParams({
-      client_id: clientId,
-      redirect_uri: redirectUri,
-      response_type: 'code',
-      scope: scopes,
-      access_type: 'offline',
-      include_granted_scopes: 'true',
-      state: state,
-    });
-    
-    // Redirect to Google OAuth
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    try {
+      const useCodeFlow = (import.meta.env.VITE_GOOGLE_USE_CODE_FLOW ?? '0') === '1';
+      if (useCodeFlow) {
+        // Authorization Code Flow (requires GOOGLE_CLIENT_SECRET on backend and allowed redirect URIs in Google console)
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined;
+        if (!clientId) throw new Error('VITE_GOOGLE_CLIENT_ID is not set');
+        const redirectUri = `${window.location.origin}/auth/callback/login`;
+        const scopes = [
+          'openid',
+          'profile',
+          'email',
+          'https://www.googleapis.com/auth/classroom.rosters.readonly',
+          'https://www.googleapis.com/auth/classroom.coursework.students',
+          'https://www.googleapis.com/auth/classroom.coursework.me',
+          'https://www.googleapis.com/auth/classroom.courses.readonly',
+        ].join(' ');
+        const state = Math.random().toString(36).substring(2, 15);
+        sessionStorage.setItem('oauth_state', state);
+        const params = new URLSearchParams({
+          client_id: clientId,
+          redirect_uri: redirectUri,
+          response_type: 'code',
+          scope: scopes,
+          access_type: 'offline',
+          include_granted_scopes: 'true',
+          state,
+          prompt: 'consent',
+        });
+        window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+      } else {
+        // Google Identity Services ID token flow (no client secret required)
+        await startGoogleOAuth();
+      }
+    } catch (e) {
+      console.error(e);
+      setIsRedirecting(false);
+    }
   };
 
   return (
