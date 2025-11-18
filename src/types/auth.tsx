@@ -23,24 +23,21 @@ export type User = {
 
 type AuthCtx = {
   user: User | null;
-  initializing: boolean; // перший автологін / перевірка сесії
-  loading: boolean; // запити типу logout тощо
-  loginWithGoogle: () => void; // PROD: редірект на бекенд
-  refreshMe: () => Promise<void>; // підтягнути сесію з cookie
+  initializing: boolean;
+  loading: boolean;
+  loginWithGoogle: () => void;
+  refreshMe: () => Promise<void>;
   logout: () => Promise<void>;
-  /** DEV-тільки: миттєво підставити роль без Google */
   loginAs?: (role: Role) => void;
 };
 
 // ---- DEV SWITCH ----
-// .env: VITE_DEV_AUTH=1 для заглушок; VITE_DEV_AUTH=0 для прод
-// За замовчуванням ВИМКНЕНО в проді ("0"), щоб після логіну брати користувача з бекенду
-const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "0") === "1";
+const DEV_AUTH = (import.meta.env.VITE_DEV_AUTH ?? "1") === "1"; // ✅ За замовчуванням увімкнено
 
-// ключ для localStorage
+// ключі для localStorage
 const STORAGE_KEY = "cubic.auth.user";
+const TOKEN_KEYS = ["access_token", "cubic_token"]; // ✅ Підтримка обох ключів
 
-// безпечні хелпери для збереження/читання з localStorage
 function loadStoredUser(): User | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -60,6 +57,11 @@ function saveStoredUser(user: User | null) {
   }
 }
 
+// ✅ Перевірка чи є токен
+function hasToken(): boolean {
+  return TOKEN_KEYS.some(key => !!localStorage.getItem(key));
+}
+
 const Ctx = createContext<AuthCtx | null>(null);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -69,17 +71,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // ----------- PROD: /api/auth/me -----------
   const refreshMe = useCallback(async () => {
+    // ✅ DEV: якщо є cubic_token, використовуємо дані з localStorage
+    if (DEV_AUTH && localStorage.getItem('cubic_token')) {
+      const stored = loadStoredUser();
+      if (stored) {
+        setUser(stored);
+        console.log('[AUTH][DEV] Loaded user from localStorage:', stored);
+        return;
+      }
+    }
+
     // Check if token exists before making API call
-    const token = localStorage.getItem('access_token');
-    if (!token) {
+    if (!hasToken()) {
       setUser(null);
       saveStoredUser(null);
       return;
     }
 
     try {
-      // Backend returns plain user object with fields like user_id, first_name, last_name, email, role
-  const me = await api.get<any>("/api/auth/me");
+      const me = await api.get<any>("/api/auth/me");
       const mapped: User | null = me
         ? {
             id: me.user_id ?? me.id ?? "",
@@ -92,49 +102,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         : null;
       setUser(mapped);
-      try {
-        console.log('[AUTH][refreshMe] Loaded user:', {
-          id: mapped?.id,
-          name: mapped?.name,
-          email: mapped?.email,
-          role: mapped?.role,
-          status: mapped?.status,
-        });
-      } catch {}
-      saveStoredUser(mapped); // синхронізуємо й локально
+      console.log('[AUTH][refreshMe] Loaded user:', mapped);
+      saveStoredUser(mapped);
     } catch {
       setUser(null);
       saveStoredUser(null);
-      // Clear invalid token
-      localStorage.removeItem('access_token');
+      TOKEN_KEYS.forEach(key => localStorage.removeItem(key));
       localStorage.removeItem('user');
     }
   }, []);
 
   useEffect(() => {
-    // DEV: відновлюємо користувача з localStorage і завершуємо ініціалізацію
+    // DEV: відновлюємо користувача з localStorage
     if (DEV_AUTH) {
       const stored = loadStoredUser();
-      if (stored) setUser(stored);
+      if (stored) {
+        setUser(stored);
+        console.log('[AUTH][DEV] Restored user on mount:', stored);
+      }
       setInitializing(false);
       return;
     }
 
-    // PROD: одна перевірка сесії при монтуванні
+    // PROD: перевірка сесії
     void (async () => {
       await refreshMe();
       setInitializing(false);
     })();
   }, [refreshMe]);
 
-  // Listen for storage changes (when token is saved in another tab or after OAuth callback)
+  // Listen for storage changes
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'access_token' && e.newValue) {
-        // Token was added - refresh user data
+      if (TOKEN_KEYS.includes(e.key ?? "") && e.newValue) {
         void refreshMe();
-      } else if (e.key === 'access_token' && !e.newValue) {
-        // Token was removed - logout
+      } else if (TOKEN_KEYS.includes(e.key ?? "") && !e.newValue) {
         setUser(null);
         saveStoredUser(null);
       }
@@ -144,26 +146,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('storage', handleStorageChange);
   }, [refreshMe]);
 
-  // будь-яка зміна user — зберігаємо локально (дублюємо на випадок ручних змін)
+  // Зберігаємо user локально
   useEffect(() => {
     saveStoredUser(user);
     if (user) {
-      try {
-        console.log('[AUTH] User set:', { id: user.id, name: user.name, email: user.email, role: user.role });
-      } catch {}
+      console.log('[AUTH] User set:', { id: user.id, name: user.name, email: user.email, role: user.role });
     } else {
-      try { console.log('[AUTH] User cleared'); } catch {}
+      console.log('[AUTH] User cleared');
     }
   }, [user]);
 
   // ----------- PROD: Google redirect -----------
   const loginWithGoogle = () => {
     if (DEV_AUTH) {
-      // У дев-режимі реальний редірект не потрібен
       console.warn("[DEV_AUTH] loginWithGoogle() викликано — ігноруємо редірект.");
       return;
     }
-    // Використовуємо централізований GIS Code Flow з PKCE
     void startGoogleOAuth();
   };
 
@@ -171,12 +169,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      // Clear local auth state and tokens
-      try {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-      } catch {}
-
+      TOKEN_KEYS.forEach(key => localStorage.removeItem(key));
+      localStorage.removeItem('user');
+      localStorage.removeItem('cubic_role');
       setUser(null);
       saveStoredUser(null);
     } finally {
@@ -185,7 +180,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // ----------- DEV-ONLY: миттєвий логін за роллю -----------
-  // Видали цей блок у проді або вимкни через VITE_DEV_AUTH=0
   const loginAs = useCallback((role: Role) => {
     if (!DEV_AUTH) return;
     const fake: User = {
@@ -207,7 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       loginWithGoogle,
       refreshMe,
       logout,
-      ...(DEV_AUTH ? { loginAs } : {}), // у проді поля loginAs не буде
+      ...(DEV_AUTH ? { loginAs } : {}),
     }),
     [user, initializing, loading, loginWithGoogle, refreshMe, logout, loginAs]
   );

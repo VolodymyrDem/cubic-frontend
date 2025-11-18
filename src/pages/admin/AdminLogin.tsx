@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { adminLogin } from '@/lib/auth';
 import { useAuth } from '@/types/auth';
 
+// ✅ DEV MODE: fake login без бекенду
+const DEV_MODE = true; // Постав false коли бекенд буде готовий
+
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { refreshMe } = useAuth();
@@ -15,11 +18,38 @@ export default function AdminLogin() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
     try {
-      await adminLogin(username.trim(), password);
-      // Синхронізуємо глобальний контекст користувача відразу після логіну
-      await refreshMe();
-      navigate('/admin/dashboard', { replace: true });
+      // ✅ DEV MODE: перевірка фейкових credentials
+      if (DEV_MODE) {
+        if (username.trim() === 'admin' && password === 'admin') {
+          // Зберігаємо фейкові дані в localStorage
+          localStorage.setItem('cubic_token', 'fake-admin-token');
+          localStorage.setItem('cubic_role', 'admin');
+          localStorage.setItem('cubic_user', JSON.stringify({
+            id: 'admin-1',
+            email: 'admin@cubic.ua',
+            name: 'Admin User',
+            role: 'admin'
+          }));
+          
+          // Синхронізуємо контекст (якщо refreshMe підтримує localStorage)
+          try {
+            await refreshMe();
+          } catch {
+            // Ігноруємо помилку refreshMe у dev mode
+          }
+          
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          throw new Error('Invalid credentials. Use admin/admin');
+        }
+      } else {
+        // ✅ PRODUCTION MODE: справжній API запит
+        await adminLogin(username.trim(), password);
+        await refreshMe();
+        navigate('/admin/dashboard', { replace: true });
+      }
     } catch (err: any) {
       setError(err?.message || 'Failed to login');
     } finally {
@@ -32,6 +62,13 @@ export default function AdminLogin() {
       <div className="w-full max-w-md rounded-lg border border-gray-200 glass glass-card p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900">
         <h1 className="mb-1 text-2xl font-semibold">Admin Login</h1>
         <p className="mb-6 text-sm text-gray-500">Sign in with admin credentials</p>
+
+        {/* ✅ DEV MODE indicator */}
+        {DEV_MODE && (
+          <div className="mb-4 rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-700 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-300">
+            🔧 <strong>Dev Mode:</strong> Use <code>admin/admin</code> to login
+          </div>
+        )}
 
         {error && (
           <div className="mb-4 rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950 dark:text-red-300">
