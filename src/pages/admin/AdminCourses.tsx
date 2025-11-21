@@ -1,7 +1,13 @@
 // src/pages/admin/AdminCourses.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,46 +15,14 @@ import { BookOpen, User, Plus, Edit2, Trash2 } from "lucide-react";
 import type { Course } from "@/types/courses";
 import type { Group } from "@/types/students";
 import type { Teacher } from "@/types/teachers";
-
-// ✅ FAKE API для курсів
-const fetchCourses = async (): Promise<Course[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { id: "c1", code: "DB101", title: "Бази даних", groupIds: ["g1", "g2"], teacherId: "t1" },
-        { id: "c2", code: "PROG101", title: "Програмування", groupIds: ["g1"], teacherId: "t1" },
-        { id: "c3", code: "MATH101", title: "Математика", groupIds: ["g2", "g3"], teacherId: "t2" },
-        { id: "c4", code: "WEB101", title: "Веб-технології", groupIds: ["g3"], teacherId: "t3" },
-      ]);
-    }, 300);
-  });
-};
-
-// ✅ FAKE API для груп
-const fetchGroups = async (): Promise<Group[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { id: "g1", name: "КН-41", type: "bachelor", course: 4 },
-        { id: "g2", name: "КН-42", type: "bachelor", course: 4 },
-        { id: "g3", name: "КН-43", type: "bachelor", course: 4 },
-      ]);
-    }, 300);
-  });
-};
-
-// ✅ FAKE API для викладачів
-const fetchTeachers = async (): Promise<Teacher[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve([
-        { id: "t1", name: "Іванов Іван Іванович", email: "ivanov@uni.ua", subjects: [] },
-        { id: "t2", name: "Петренко Марія Олександрівна", email: "petrenko@uni.ua", subjects: [] },
-        { id: "t3", name: "Сидоренко Олег Петрович", email: "sydorenko@uni.ua", subjects: [] },
-      ]);
-    }, 300);
-  });
-};
+import {
+  fetchCoursesApi,
+  createCourseApi,
+  updateCourseApi,
+  deleteCourseApi,
+} from "@/lib/api/courses-api";
+import { fetchGroupsApi } from "@/lib/api/groups-api";
+import { fetchTeachersApi } from "@/lib/api/teachers-api";
 
 const AdminCourses: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
@@ -62,6 +36,7 @@ const AdminCourses: React.FC = () => {
   const [courseForm, setCourseForm] = useState({
     code: "",
     title: "",
+    duration: "",
     teacherId: "",
     groupIds: [] as string[],
   });
@@ -74,9 +49,9 @@ const AdminCourses: React.FC = () => {
   const loadData = async () => {
     try {
       const [coursesData, groupsData, teachersData] = await Promise.all([
-        fetchCourses(),
-        fetchGroups(),
-        fetchTeachers(),
+        fetchCoursesApi(),
+        fetchGroupsApi(),
+        fetchTeachersApi(),
       ]);
       setCourses(coursesData);
       setGroups(groupsData);
@@ -105,64 +80,126 @@ const AdminCourses: React.FC = () => {
       (c) =>
         c.title.toLowerCase().includes(s) ||
         c.code.toLowerCase().includes(s) ||
-        (c.teacherId && teacherNameById.get(c.teacherId)?.toLowerCase().includes(s)) ||
-        c.groupIds.some((gid) => groupNameById.get(gid)?.toLowerCase().includes(s))
+        (c.teacherId &&
+          teacherNameById.get(c.teacherId)?.toLowerCase().includes(s)) ||
+        c.groupIds.some((gid) =>
+          groupNameById.get(gid)?.toLowerCase().includes(s),
+        ),
     );
   }, [courses, q, teacherNameById, groupNameById]);
 
-  // Handlers
-  const handleCreate = () => {
-    if (!courseForm.code.trim() || !courseForm.title.trim()) {
-      alert("Введіть код і назву курсу");
-      return;
+  // Спільна валідація для create / update
+  const parseDurationOrAlert = (): number | null => {
+    if (!courseForm.duration.trim()) {
+      alert("Введіть довжину курсу");
+      return null;
     }
-
-    console.log("[FAKE] Creating course:", courseForm);
-    const newCourse: Course = {
-      id: `c${Date.now()}`,
-      code: courseForm.code,
-      title: courseForm.title,
-      teacherId: courseForm.teacherId || null,
-      groupIds: courseForm.groupIds,
-    };
-
-    setCourses([...courses, newCourse]);
-    setDialogOpen(false);
-    setCourseForm({ code: "", title: "", teacherId: "", groupIds: [] });
+    const durationNumber = Number(courseForm.duration);
+    if (!Number.isFinite(durationNumber) || durationNumber <= 0) {
+      alert("Довжина курсу має бути додатним числом");
+      return null;
+    }
+    return durationNumber;
   };
 
-  const handleUpdate = () => {
+  const buildTeacherIds = (): string[] =>
+    courseForm.teacherId && courseForm.teacherId.length > 0
+      ? [courseForm.teacherId]
+      : [];
+
+  // CREATE
+  const handleCreate = async () => {
+    if (!courseForm.title.trim()) {
+      alert("Введіть назву курсу");
+      return;
+    }
+    const durationNumber = parseDurationOrAlert();
+    if (durationNumber == null) return;
+
+    try {
+      const created = await createCourseApi({
+        name: courseForm.title,
+        duration: durationNumber,
+        group_ids: courseForm.groupIds,
+        teacher_ids: buildTeacherIds(),
+      });
+
+      const newCourse: Course = {
+        ...created,
+        code: courseForm.code || created.code || "",
+      };
+
+      setCourses([...courses, newCourse]);
+      setDialogOpen(false);
+      setCourseForm({
+        code: "",
+        title: "",
+        duration: "",
+        teacherId: "",
+        groupIds: [],
+      });
+    } catch (err: any) {
+      console.error("Failed to create course:", err);
+      alert(err.detail || "Не вдалося створити курс");
+    }
+  };
+
+  // UPDATE
+  const handleUpdate = async () => {
     if (!editingCourse) return;
-    if (!courseForm.code.trim() || !courseForm.title.trim()) {
-      alert("Введіть код і назву курсу");
+    if (!courseForm.title.trim()) {
+      alert("Введіть назву курсу");
+      return;
+    }
+    const durationNumber =
+      courseForm.duration.trim().length > 0
+        ? parseDurationOrAlert()
+        : editingCourse.duration ?? null;
+    if (durationNumber == null) {
+      alert("Немає тривалості курсу (duration)");
       return;
     }
 
-    console.log("[FAKE] Updating course:", editingCourse.id, courseForm);
-    setCourses(
-      courses.map((c) =>
-        c.id === editingCourse.id
-          ? {
-              ...c,
-              code: courseForm.code,
-              title: courseForm.title,
-              teacherId: courseForm.teacherId || null,
-              groupIds: courseForm.groupIds,
-            }
-          : c
-      )
-    );
+    try {
+      const updated = await updateCourseApi(editingCourse.id, {
+        name: courseForm.title,
+        duration: durationNumber,
+        group_ids: courseForm.groupIds,
+        teacher_ids: buildTeacherIds(),
+      });
 
-    setDialogOpen(false);
-    setEditingCourse(null);
-    setCourseForm({ code: "", title: "", teacherId: "", groupIds: [] });
+      const next: Course = {
+        ...updated,
+        code: courseForm.code || updated.code || "",
+      };
+
+      setCourses(courses.map((c) => (c.id === next.id ? next : c)));
+
+      setDialogOpen(false);
+      setEditingCourse(null);
+      setCourseForm({
+        code: "",
+        title: "",
+        duration: "",
+        teacherId: "",
+        groupIds: [],
+      });
+    } catch (err: any) {
+      console.error("Failed to update course:", err);
+      alert(err.detail || "Не вдалося оновити курс");
+    }
   };
 
-  const handleDelete = (id: string) => {
+  // DELETE
+  const handleDelete = async (id: string) => {
     if (!confirm("Видалити цей курс?")) return;
-
-    console.log("[FAKE] Deleting course:", id);
-    setCourses(courses.filter((c) => c.id !== id));
+    try {
+      await deleteCourseApi(id);
+      setCourses(courses.filter((c) => c.id !== id));
+    } catch (err: any) {
+      console.error("Failed to delete course:", err);
+      alert(err.detail || "Не вдалося видалити курс");
+    }
   };
 
   const openEditDialog = (course: Course) => {
@@ -170,6 +207,10 @@ const AdminCourses: React.FC = () => {
     setCourseForm({
       code: course.code,
       title: course.title,
+      duration:
+        course.duration !== undefined && course.duration !== null
+          ? String(course.duration)
+          : "",
       teacherId: course.teacherId || "",
       groupIds: course.groupIds,
     });
@@ -217,7 +258,13 @@ const AdminCourses: React.FC = () => {
         <Button
           onClick={() => {
             setEditingCourse(null);
-            setCourseForm({ code: "", title: "", teacherId: "", groupIds: [] });
+            setCourseForm({
+              code: "",
+              title: "",
+              duration: "",
+              teacherId: "",
+              groupIds: [],
+            });
             setDialogOpen(true);
           }}
           className="btn-primary"
@@ -265,7 +312,10 @@ const AdminCourses: React.FC = () => {
                       className="border-b border-border/50 hover:bg-surface-2/30 transition-colors"
                     >
                       <td className="p-3">
-                        <Badge variant="outline" className="font-mono bg-blue-500/20 text-blue-300 border-blue-500/30">
+                        <Badge
+                          variant="outline"
+                          className="font-mono bg-blue-500/20 text-blue-300 border-blue-500/30"
+                        >
                           {c.code}
                         </Badge>
                       </td>
@@ -284,21 +334,35 @@ const AdminCourses: React.FC = () => {
                         <div className="flex flex-wrap gap-1">
                           {c.groupIds.length > 0 ? (
                             c.groupIds.map((gid, idx) => (
-                              <Badge key={idx} variant="outline" className="bg-purple-500/20 text-purple-300 border-purple-500/30">
+                              <Badge
+                                key={idx}
+                                variant="outline"
+                                className="bg-purple-500/20 text-purple-300 border-purple-500/30"
+                              >
                                 {groupNameById.get(gid) ?? gid}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-muted-foreground text-sm">Немає груп</span>
+                            <span className="text-muted-foreground text-sm">
+                              Немає груп
+                            </span>
                           )}
                         </div>
                       </td>
                       <td className="p-3">
                         <div className="flex gap-2 justify-end">
-                          <Button size="sm" variant="ghost" onClick={() => openEditDialog(c)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => openEditDialog(c)}
+                          >
                             <Edit2 className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => handleDelete(c.id)}>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDelete(c.id)}
+                          >
                             <Trash2 className="w-4 h-4 text-red-400" />
                           </Button>
                         </div>
@@ -325,7 +389,10 @@ const AdminCourses: React.FC = () => {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
           onClick={() => setDialogOpen(false)}
         >
-          <div className="glasscardMd w-full max-w-md p-6 m-4" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="glasscardMd w-full max-w-md p-6 m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h2 className="text-2xl font-bold mb-2">
               {editingCourse ? "Редагувати курс" : "Новий курс"}
             </h2>
@@ -335,31 +402,58 @@ const AdminCourses: React.FC = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Код курсу</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Довжина курсу
+                </label>
                 <Input
-                  placeholder="DB101"
-                  value={courseForm.code}
-                  onChange={(e) => setCourseForm({ ...courseForm, code: e.target.value })}
+                  placeholder="Напр. 40"
+                  type="number"
+                  value={courseForm.duration}
+                  onChange={(e) =>
+                    setCourseForm({ ...courseForm, duration: e.target.value })
+                  }
                   className="input"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Назва курсу</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Назва курсу
+                </label>
                 <Input
                   placeholder="Бази даних"
                   value={courseForm.title}
-                  onChange={(e) => setCourseForm({ ...courseForm, title: e.target.value })}
+                  onChange={(e) =>
+                    setCourseForm({ ...courseForm, title: e.target.value })
+                  }
                   className="input"
                 />
               </div>
 
               <div>
-                <label className="text-sm font-medium mb-2 block">Викладач</label>
+                <label className="text-sm font-medium mb-2 block">
+                  Код курсу (локальний)
+                </label>
+                <Input
+                  placeholder="DB101 (не зберігається в бекенді)"
+                  value={courseForm.code}
+                  onChange={(e) =>
+                    setCourseForm({ ...courseForm, code: e.target.value })
+                  }
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Викладач
+                </label>
                 <select
                   className="input w-full"
                   value={courseForm.teacherId}
-                  onChange={(e) => setCourseForm({ ...courseForm, teacherId: e.target.value })}
+                  onChange={(e) =>
+                    setCourseForm({ ...courseForm, teacherId: e.target.value })
+                  }
                 >
                   <option value="">Не призначено</option>
                   {teachers.map((t) => (
@@ -392,10 +486,17 @@ const AdminCourses: React.FC = () => {
             </div>
 
             <div className="flex gap-3 mt-6">
-              <Button variant="outline" onClick={() => setDialogOpen(false)} className="btn flex-1">
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                className="btn flex-1"
+              >
                 Скасувати
               </Button>
-              <Button onClick={editingCourse ? handleUpdate : handleCreate} className="btn-primary flex-1">
+              <Button
+                onClick={editingCourse ? handleUpdate : handleCreate}
+                className="btn-primary flex-1"
+              >
                 {editingCourse ? "Зберегти" : "Створити"}
               </Button>
             </div>

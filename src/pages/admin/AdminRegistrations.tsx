@@ -8,9 +8,8 @@ import {
   updateRegistration,
   approveRegistration,
   rejectRegistration,
-  fetchAdminGroups,
-} from "@/lib/fakeApi/admin";
-
+} from "@/lib/api/admin-registrations";
+import { fetchAdminGroups } from "@/lib/fakeApi/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";

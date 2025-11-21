@@ -29,7 +29,6 @@ export async function createTeacher(data: Partial<Teacher>): Promise<Teacher> {
   return ok({
     id: uid(),
     name: data.name || "Новий викладач",
-    email: data.email || "teacher@example.com",
     subjects: data.subjects || [],
   });
 }
@@ -38,7 +37,6 @@ export async function updateTeacher(id: string, data: Partial<Teacher>): Promise
   return ok({
     id,
     name: data.name || "Оновлений викладач",
-    email: data.email || "updated@example.com",
     subjects: data.subjects || [],
   });
 }
@@ -660,7 +658,6 @@ export async function approveRegistration(id: string): Promise<RegistrationActio
   } else if (reg.role === "teacher") {
     await createTeacher({
       name: reg.fullName,
-      email: reg.email,
       subjects: reg.subjects || [],
     });
   }

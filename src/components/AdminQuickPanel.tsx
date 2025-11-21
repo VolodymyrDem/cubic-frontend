@@ -1,6 +1,9 @@
+// src/components/AdminQuickPanel.tsx
+
 import React, { useEffect, useState } from "react";
-import { pushAdminChange } from "@/lib/fakeApi/admin";
 import { fetchAdminStats as fetchAdminStatsReal } from "@/lib/api/admin";
+import { generateSchedule } from "@/lib/api/schedule-api";
+import type { ScheduleGenerationRequestDto } from "@/lib/api/schedule-api";
 import { Users, BookOpen, Archive, IdCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ViewModeToggle from "./ViewModeToggle";
@@ -41,14 +44,17 @@ const AdminQuickPanel: React.FC<{
   const [toast, setToast] = useState<string | null>(null);
   const nav = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
+  const [solving, setSolving] = useState(false); // стан генерації розкладу
 
   useEffect(() => {
     fetchAdminStatsReal()
-      .then((s) => setStats({
-        students: s.students_total,
-        teachers: s.teachers_total,
-        courses: s.courses_total,
-      }))
+      .then((s) =>
+        setStats({
+          students: s.students_total,
+          teachers: s.teachers_total,
+          courses: s.courses_total,
+        }),
+      )
       .catch(() => setStats(null));
   }, []);
 
@@ -64,6 +70,35 @@ const AdminQuickPanel: React.FC<{
     setTimeout(() => setToast(null), 1000);
   };
 
+  const handleSolveClick = async () => {
+    if (solving) return;
+    setSolving(true);
+    try {
+      const payload: ScheduleGenerationRequestDto = {
+        name: `Auto-generated schedule ${new Date().toLocaleString("uk-UA")}`,
+        // TODO: коли буде facultyId / semester / дати з бекенду — підставити сюди
+        respectPreferences: true,
+      };
+
+      const res = await generateSchedule(payload);
+
+      if (res.status === "pending") {
+        flash("Генерація розкладу запущена (status: pending)");
+      } else if (res.status === "generated") {
+        flash("Розклад згенеровано");
+      } else if (res.status === "failed") {
+        flash("Помилка: генерація розкладу не вдалася");
+      } else {
+        flash(`Статус генерації: ${res.status}`);
+      }
+    } catch (e) {
+      console.error("Failed to generate schedule", e);
+      flash("Помилка генерації розкладу");
+    } finally {
+      setSolving(false);
+    }
+  };
+
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
@@ -75,7 +110,7 @@ const AdminQuickPanel: React.FC<{
               flash(
                 m === "view"
                   ? "Увімкнено режим перегляду"
-                  : "Увімкнено режим редагування"
+                  : "Увімкнено режим редагування",
               );
             }}
           />
@@ -116,49 +151,42 @@ const AdminQuickPanel: React.FC<{
       </div>
 
       {!isMobile && (
-  <div className="mt-4">
-    <Crossfade stateKey={value}>
-      {value === "view" ? (
-        <Reveal y={6} opacityFrom={0}>
-          <ExportButtons
-            onExportAll={() => flash("Експорт усього розкладу")}
-            onExportCourse={() => flash("Експорт обраного курсу")}
-            onExportLevel={() => flash("Експорт бакалаврів / магістрів")}
-          />
-        </Reveal>
-      ) : (
-<Reveal y={6} opacityFrom={0}>
-          <div className="grid gap-3 sm:grid-cols-3">
-                <button
-                  className="btn py-3 rounded-2xl hover-shadow"
-                  onClick={async () => {
-                    await pushAdminChange({
-                      entity: "schedule",
-                      action: "updated",
-                      title: "Швидке редагування розкладу (solve)",
-                      actor: "Admin",
-                    });
-                    flash("solve is done");
-                  }}
-                >
-                  Вирішити
-                </button>
-                <button
-                  className="btn py-3 rounded-2xl hover-shadow"
-                  onClick={() => flash("optimize is done")}
-                >
-                  Оптимізувати
-                </button>
-                <button
-                  className="btn py-3 rounded-2xl hover-shadow"
-                  onClick={() => nav("/admin/logs")}
-                >
-                  Логи
-                </button>
-              </div>
-            </Reveal>
-          )}
-           </Crossfade>
+        <div className="mt-4">
+          <Crossfade stateKey={value}>
+            {value === "view" ? (
+              <Reveal y={6} opacityFrom={0}>
+                <ExportButtons
+                  onExportAll={() => flash("Експорт усього розкладу")}
+                  onExportCourse={() => flash("Експорт обраного курсу")}
+                  onExportLevel={() => flash("Експорт бакалаврів / магістрів")}
+                />
+              </Reveal>
+            ) : (
+              <Reveal y={6} opacityFrom={0}>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <button
+                    className="btn py-3 rounded-2xl hover-shadow"
+                    onClick={handleSolveClick}
+                    disabled={solving}
+                  >
+                    {solving ? "Генеруємо..." : "Вирішити"}
+                  </button>
+                  <button
+                    className="btn py-3 rounded-2xl hover-shadow"
+                    onClick={() => flash("optimize is done")}
+                  >
+                    Оптимізувати
+                  </button>
+                  <button
+                    className="btn py-3 rounded-2xl hover-shadow"
+                    onClick={() => nav("/admin/logs")}
+                  >
+                    Логи
+                  </button>
+                </div>
+              </Reveal>
+            )}
+          </Crossfade>
         </div>
       )}
 

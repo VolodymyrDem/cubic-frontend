@@ -4,7 +4,7 @@ import { config } from "@/config/runtime";
 export const API_BASE = config.API_BASE_URL;
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-type Json = Record<string, unknown> | undefined;
+type Json = object | null | undefined;
 
 async function request<T>(
   path: string,
