@@ -2,8 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { fetchAdminStats as fetchAdminStatsReal } from "@/lib/api/admin";
-import { generateSchedule } from "@/lib/api/schedule-api";
-import type { ScheduleGenerationRequestDto } from "@/lib/api/schedule-api";
+import { generateScheduleApi, type GenerateSchedulePayload } from "@/lib/api/schedule-api";
 import { Users, BookOpen, Archive, IdCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import ViewModeToggle from "./ViewModeToggle";
@@ -39,12 +38,13 @@ const StatTile: React.FC<{
 const AdminQuickPanel: React.FC<{
   value: ViewMode;
   onChange: (m: ViewMode) => void;
-}> = ({ value, onChange }) => {
+  onScheduleGenerated?: (scheduleId: string) => void; // 🔹 NEW: callback після генерації
+}> = ({ value, onChange, onScheduleGenerated }) => {
   const [stats, setStats] = useState<Stats | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const nav = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
-  const [solving, setSolving] = useState(false); // стан генерації розкладу
+  const [solving, setSolving] = useState(false);
 
   useEffect(() => {
     fetchAdminStatsReal()
@@ -67,33 +67,58 @@ const AdminQuickPanel: React.FC<{
 
   const flash = (msg: string) => {
     setToast(msg);
-    setTimeout(() => setToast(null), 1000);
+    setTimeout(() => setToast(null), 3000);
   };
 
   const handleSolveClick = async () => {
     if (solving) return;
     setSolving(true);
+
     try {
-      const payload: ScheduleGenerationRequestDto = {
-        name: `Auto-generated schedule ${new Date().toLocaleString("uk-UA")}`,
-        // TODO: коли буде facultyId / semester / дати з бекенду — підставити сюди
-        respectPreferences: true,
+      // 🔹 Захардкоджені параметри (можна винести в конфіг пізніше)
+      const payload: GenerateSchedulePayload = {
+        policy: {
+          soft_weights: {
+            daily_load_balance: 10,
+            windows_penalty: 20,
+            teacher_avoid_slots_penalty: 50,
+            teacher_preferred_days_penalty: 15,
+          },
+        },
+        params: {
+          timeLimitSec: 20,
+        },
+        schedule_label: `Розклад ${new Date().toLocaleDateString("uk-UA")} ${new Date().toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}`,
       };
 
-      const res = await generateSchedule(payload);
+      console.log("🚀 Генерація розкладу...", payload);
 
-      if (res.status === "pending") {
-        flash("Генерація розкладу запущена (status: pending)");
-      } else if (res.status === "generated") {
-        flash("Розклад згенеровано");
-      } else if (res.status === "failed") {
-        flash("Помилка: генерація розкладу не вдалася");
-      } else {
-        flash(`Статус генерації: ${res.status}`);
+      const response = await generateScheduleApi(payload);
+
+      console.log("✅ Розклад згенеровано:", response);
+
+      const scheduleArray = response.schedule || [];
+
+      localStorage.setItem(
+        "last_generated_schedule",
+        JSON.stringify({
+          message: response.message,
+          schedule: scheduleArray,
+        })
+      );
+
+      flash(
+        `Розклад успішно створено! Згенеровано ${scheduleArray.length} призначень.`
+      );
+
+      // 🔹 Викликаємо callback, щоб батьківський компонент оновив таблицю
+      if (onScheduleGenerated) {
+        onScheduleGenerated("latest");
       }
-    } catch (e) {
-      console.error("Failed to generate schedule", e);
-      flash("Помилка генерації розкладу");
+    } catch (e: any) {
+      console.error("❌ Помилка генерації розкладу:", e);
+      const errorMsg = e?.detail || e?.message || "Не вдалося згенерувати розклад";
+      flash(`Помилка: ${errorMsg}`);
     } finally {
       setSolving(false);
     }
@@ -173,7 +198,7 @@ const AdminQuickPanel: React.FC<{
                   </button>
                   <button
                     className="btn py-3 rounded-2xl hover-shadow"
-                    onClick={() => flash("optimize is done")}
+                    onClick={() => flash("Оптимізація поки не реалізована")}
                   >
                     Оптимізувати
                   </button>

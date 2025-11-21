@@ -2,7 +2,103 @@
 
 import { api } from "@/lib/api";
 
-// ---- Backend DTO types ----
+// ===== Типи для генерації розкладу =====
+
+export interface SoftWeights {
+  daily_load_balance: number;
+  windows_penalty: number;
+  teacher_avoid_slots_penalty: number;
+  teacher_preferred_days_penalty: number;
+}
+
+export interface SchedulePolicy {
+  soft_weights: SoftWeights;
+}
+
+export interface ScheduleParams {
+  timeLimitSec: number;
+}
+
+export interface GenerateSchedulePayload {
+  policy: SchedulePolicy;
+  params: ScheduleParams;
+  schedule_label: string;
+}
+
+// ===== Типи відповіді бекенду =====
+
+export interface AssignmentResponse {
+  id: string;
+  scheduleId: string;
+  courseId: string;
+  courseName?: string;
+  teacherId: string;
+  teacherName?: string;
+  groupId: string;
+  groupName?: string;
+  roomId: string;
+  roomName?: string;
+  timeslotId: number;
+  subgroupNo: number;
+  courseType: string;
+}
+
+export interface ScheduleResponse {
+  schedule_id: string;
+  label: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GenerateScheduleResponse {
+  message: string;
+  schedule: Array<{
+    timeslotId: number;
+    groupId: string;
+    subgroupNo: number;
+    courseId: string;
+    teacherId: string;
+    roomId: string;
+    courseType: string;
+    scheduleId: string;
+    assignmentId: string;
+  }>;
+}
+
+// ===== API функції =====
+
+/**
+ * Генерація розкладу через POST /api/schedules/generate
+ * Приймає policy, params, schedule_label
+ * Повертає schedule + assignments
+ */
+export async function generateScheduleApi(
+  payload: GenerateSchedulePayload
+): Promise<GenerateScheduleResponse> {
+  return await api.post<GenerateScheduleResponse>(
+    "/api/schedules/generate",
+    payload
+  );
+}
+
+/**
+ * Отримати список усіх розкладів
+ */
+export async function fetchSchedulesApi(): Promise<ScheduleResponse[]> {
+  const response = await api.get<{ schedules: ScheduleResponse[] }>(
+    "/api/schedules/"
+  );
+  return response.schedules || [];
+}
+
+/**
+ * Видалити розклад
+ */
+export async function deleteScheduleApi(scheduleId: string): Promise<void> {
+  await api.delete(`/api/schedules/${scheduleId}`);
+}
+
+// ===== Legacy типи (для сумісності зі старим кодом) =====
 
 export type ScheduleStatus = "pending" | "generated" | "failed" | "archived";
 
@@ -13,8 +109,8 @@ export interface ScheduleListItemDto {
   isActive: boolean;
   status: ScheduleStatus;
   version?: number | null;
-  createdAt: string; // ISO datetime
-  updatedAt: string; // ISO datetime
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ScheduleListResponseDto {
@@ -28,59 +124,19 @@ export interface ScheduleGenerationRequestDto {
   name: string;
   semester?: string;
   facultyId?: string;
-  startDate?: string;          // "YYYY-MM-DD"
-  endDate?: string;            // "YYYY-MM-DD"
+  startDate?: string;
+  endDate?: string;
   maxLessonsPerDay?: number;
   respectPreferences?: boolean;
 }
 
 export interface ScheduleGenerationResponseDto {
   scheduleId: string;
-  status: ScheduleStatus;      // "pending" | "generated" | "failed"
+  status: ScheduleStatus;
   message?: string | null;
 }
 
-export type ParityDto = "odd" | "even" | "both";
-
-export interface AssignmentDto {
-  id: string;
-  scheduleId: string;
-  groupId: string;
-  groupName?: string | null;
-  courseId: string;
-  courseName?: string | null;
-  teacherId: string;
-  teacherName?: string | null;
-  roomId: string;
-  roomName?: string | null;
-  weekday: number;             // 1..7
-  parity: ParityDto;
-  startTime: string;           // "HH:MM"
-  endTime: string;             // "HH:MM"
-  subgroup?: number | null;
-}
-
-export interface ScheduleWithAssignmentsDto extends ScheduleListItemDto {
-  assignments: AssignmentDto[];
-}
-
-// ---- Teacher / Student schedule DTOs ----
-
-export interface TeacherScheduleDto {
-  teacherId: string;
-  scheduleId: string;
-  lessons: AssignmentDto[];
-}
-
-export interface StudentScheduleDto {
-  studentId: string;
-  scheduleId: string;
-  lessons: AssignmentDto[];
-}
-
-// ---- API functions ----
-
-// Запуск генерації розкладу (бекенд за замовчуванням працює в async-режимі)
+// Legacy функція (deprecated, використовується старим кодом)
 export async function generateSchedule(
   payload: ScheduleGenerationRequestDto,
   opts?: { async?: boolean }
@@ -89,76 +145,51 @@ export async function generateSchedule(
   return await api.post(`/api/schedules/generate${query}`, payload);
 }
 
-// Отримати список розкладів (версії / архів)
-export async function fetchSchedules(
-  params?: { page?: number; pageSize?: number; status?: ScheduleStatus }
-): Promise<ScheduleListResponseDto> {
-  const search = new URLSearchParams();
-  if (params?.page) search.set("page", String(params.page));
-  if (params?.pageSize) search.set("pageSize", String(params.pageSize));
-  if (params?.status) search.set("status", params.status);
-  const qs = search.toString();
-  const suffix = qs ? `?${qs}` : "";
-  return await api.get(`/api/schedules${suffix}`);
+
+export interface TimeslotInfo {
+  id: number;
+  weekday: 1 | 2 | 3 | 4 | 5;
+  pair: 1 | 2 | 3 | 4;
+  parity: "any" | "even" | "odd";
+  time: { start: string; end: string };
 }
 
-// Деталі конкретного розкладу (метадані + assignments)
-export async function fetchScheduleById(
-  scheduleId: string,
-  opts?: { includeAssignments?: boolean }
-): Promise<ScheduleWithAssignmentsDto> {
-  const search = new URLSearchParams();
-  if (opts?.includeAssignments === false) {
-    search.set("includeAssignments", "false");
-  }
-  const qs = search.toString();
-  const suffix = qs ? `?${qs}` : "";
-  return await api.get(`/api/schedules/${scheduleId}${suffix}`);
+export async function fetchTimeslotsMapApi(): Promise<TimeslotInfo[]> {
+  const response = await api.get<{ timeslots: TimeslotInfo[] }>(
+    "/api/timeslots/"
+  );
+  return response.timeslots || [];
 }
 
-// Розклад викладача для активного (або заданого) розкладу
-export async function fetchTeacherSchedule(
-  teacherId: string,
-  params?: { scheduleId?: string; fromDate?: string; toDate?: string }
-): Promise<TeacherScheduleDto> {
-  const search = new URLSearchParams();
-  if (params?.scheduleId) search.set("scheduleId", params.scheduleId);
-  if (params?.fromDate) search.set("fromDate", params.fromDate);
-  if (params?.toDate) search.set("toDate", params.toDate);
-  const qs = search.toString();
-  const suffix = qs ? `?${qs}` : "";
-  return await api.get(`/api/schedules/teacher/${teacherId}${suffix}`);
+/**
+ * Отримати активний розклад з усіма деталями
+ * (assignments + інформація для маппінгу)
+ */
+export interface ScheduleWithDetailsResponse {
+  message: string;
+  schedule: ScheduleResponse;
+  assignments: Array<{
+    timeslotId: number;
+    groupId: string;
+    subgroupNo: number;
+    courseId: string;
+    teacherId: string;
+    roomId: string;
+    courseType: string;
+    scheduleId: string;
+    assignmentId: string;
+  }>;
 }
 
-// Розклад студента (знадобиться трохи пізніше)
-export async function fetchStudentSchedule(
-  studentId: string,
-  params?: { scheduleId?: string; fromDate?: string; toDate?: string }
-): Promise<StudentScheduleDto> {
-  const search = new URLSearchParams();
-  if (params?.scheduleId) search.set("scheduleId", params.scheduleId);
-  if (params?.fromDate) search.set("fromDate", params.fromDate);
-  if (params?.toDate) search.set("toDate", params.toDate);
-  const qs = search.toString();
-  const suffix = qs ? `?${qs}` : "";
-  return await api.get(`/api/schedules/student/${studentId}${suffix}`);
+export async function fetchActiveScheduleApi(): Promise<ScheduleWithDetailsResponse> {
+  return await api.get("/api/schedules/active");
 }
 
-export async function waitForScheduleGenerated(
-  scheduleId: string,
-  opts: { maxAttempts?: number; delayMs?: number } = {},
-): Promise<ScheduleWithAssignmentsDto> {
-  const maxAttempts = opts.maxAttempts ?? 15;
-  const delayMs = opts.delayMs ?? 2000;
-
-  for (let i = 0; i < maxAttempts; i++) {
-    const current = await fetchScheduleById(scheduleId);
-    if (current.status !== "pending") {
-      return current;
-    }
-    await new Promise((resolve) => setTimeout(resolve, delayMs));
-  }
-
-  // Якщо після N спроб все ще pending — кидаємо помилку
-  throw new Error("Schedule generation is still pending after timeout");
+/**
+ * Альтернатива: отримати розклад за ID
+ */
+export async function fetchScheduleDetailsApi(
+  scheduleId: string
+): Promise<ScheduleWithDetailsResponse> {
+  return await api.get(`/api/schedules/${scheduleId}/details`);
 }
