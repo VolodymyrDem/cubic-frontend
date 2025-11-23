@@ -37,13 +37,17 @@ const AdminStudents: React.FC = () => {
 
   // Load data
   const mapAdminStudentToStudent = useCallback((backend: AdminStudent): Student => {
-    const fullName = [backend.last_name, backend.first_name, backend.patronymic]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
+    // Backend uses camelCase: lastName, firstName, patronymic
+    const parts = [
+      backend.lastName || backend.last_name,
+      backend.firstName || backend.first_name,
+      backend.patronymic
+    ].filter(Boolean);
+    
+    const fullName = parts.join(" ").trim();
 
     return {
-      id: backend.student_id,
+      id: backend.studentId || backend.student_id,
       name: fullName || backend.email || backend.student_id,
       email: backend.email ?? "",
       groupId: backend.groupId ?? "",
@@ -54,6 +58,7 @@ const AdminStudents: React.FC = () => {
   const loadStudents = useCallback(async () => {
     try {
       const { students: backendStudents } = await fetchAdminStudentsPaged(0, 200);
+      console.log('🔍 Backend students sample:', backendStudents.slice(0, 2));
       setStudents(backendStudents.map(mapAdminStudentToStudent));
     } catch (error) {
       console.error("Failed to load students:", error);
@@ -104,13 +109,15 @@ const AdminStudents: React.FC = () => {
         name: groupForm.name.trim(),
         type: groupForm.type,
         course: groupForm.course,
+        size: 30, // Default group size
       });
       await loadGroups();
       setGroupDialogOpen(false);
       setGroupForm({ name: "", type: "bachelor", course: 1 });
     } catch (error: any) {
       console.error("Failed to create group:", error);
-      alert(error?.detail || "Не вдалося створити групу");
+      const errorMessage = error?.message || error?.detail || JSON.stringify(error);
+      alert(`Не вдалося створити групу: ${errorMessage}`);
     }
   };
 
@@ -132,7 +139,8 @@ const AdminStudents: React.FC = () => {
       setGroupForm({ name: "", type: "bachelor", course: 1 });
     } catch (error: any) {
       console.error("Failed to update group:", error);
-      alert(error?.detail || "Не вдалося оновити групу");
+      const errorMessage = error?.message || error?.detail || JSON.stringify(error);
+      alert(`Не вдалося оновити групу: ${errorMessage}`);
     }
   };
 
@@ -143,7 +151,8 @@ const AdminStudents: React.FC = () => {
       await loadGroups();
     } catch (error: any) {
       console.error("Failed to delete group:", error);
-      alert(error?.detail || "Не вдалося видалити групу");
+      const errorMessage = error?.message || error?.detail || JSON.stringify(error);
+      alert(`Не вдалося видалити групу: ${errorMessage}`);
     }
   };
 
@@ -162,6 +171,9 @@ const AdminStudents: React.FC = () => {
       });
 
       const mapped = mapAdminStudentToStudent(updated);
+      // Preserve email from original student since backend doesn't return it
+      mapped.email = editingStudent.email;
+      
       setStudents((prev) =>
         prev.map((s) => (s.id === mapped.id ? mapped : s))
       );
