@@ -7,7 +7,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { api, API_BASE } from "@/lib/api";
+import { api } from "@/lib/api";
 import { startGoogleOAuth } from "@/lib/googleAuth";
 
 export type Role = "student" | "teacher" | "admin";
@@ -92,13 +92,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     try {
       const token = localStorage.getItem('access_token') || localStorage.getItem('cubic_token');
-      console.log('[AUTH][refreshMe] Attempting to fetch /api/auth/me', {
+      console.log('[AUTH][refreshMe] Attempting to fetch /auth/me', {
         hasToken: !!token,
         tokenLength: token?.length,
         tokenPreview: token ? `${token.substring(0, 20)}...` : null,
       });
 
-      const me = await api.get<any>("/api/auth/me");
+      const me = await api.get<any>("/auth/me");
       const mapped: User | null = me
         ? {
             id: me.user_id ?? me.id ?? "",
@@ -202,9 +202,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Для адміністратора виконуємо автоматичний логін через API
     if (role === "admin") {
       try {
-        // Виконуємо автоматичний логін адміністратора
-        const apiBase = API_BASE || 'http://localhost:8000';
-        const response = await fetch(`${apiBase}/api/auth/admin/login`, {
+        // Nginx проксує /api/* на бекенд, тому просто використовуємо /api/...
+        const endpoint = `${config.API_BASE_URL}/auth/admin/login`;
+        const response = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
