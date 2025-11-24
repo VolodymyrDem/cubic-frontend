@@ -18,7 +18,7 @@ declare global {
 const fromWindow = (typeof window !== "undefined" && window.__APP_CONFIG__) || {};
 
 // Fallback на VITE_ змінні для dev режиму (коли window.__APP_CONFIG__ порожній)
-const fromVite = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
+const fromVite: Record<string, any> = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
 
 export const config: RuntimeConfig = {
   // BASE_URL від Vite (із vite.config.ts base)

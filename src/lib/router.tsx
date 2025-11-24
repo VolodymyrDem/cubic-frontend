@@ -8,7 +8,6 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import RoleGuard from "@/components/RoleGuard";
 import RequireAnon from "@/components/RequireAnon";
 import AuthProcessing from "@/pages/AuthProcessing";
-import AuthCallback from "@/pages/AuthCallback";
 import CompleteProfile from "@/pages/CompleteProfile";
 import RoleSelectionPage from "@/pages/RoleSelectionPage";
 import PendingApproval from "@/pages/PendingApproval";
