@@ -3,6 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <script>
+      // Відновлення URL після редіректу з 404.html (для GitHub Pages SPA)
+      (function() {
+        var redirect = sessionStorage.redirect;
+        delete sessionStorage.redirect;
+        if (redirect && redirect !== location.href) {
+          history.replaceState(null, null, redirect);
+        }
+      })();
+    </script>
+    <script>
   (function () {
     try {
       var t = localStorage.getItem('fh.theme') || 'dark';
