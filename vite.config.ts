@@ -5,7 +5,7 @@ import { fileURLToPath, URL } from "node:url";
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: process.env.VITE_BASE_PATH || '/',
+  base: process.env.VITE_BASE_PATH || '/cubic-frontend/', // Для GitHub Pages
   plugins: [react(), tailwindcss()],
    resolve: {
     alias: {
